@@ -1,9 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FStorm.Test
 {
@@ -22,17 +17,45 @@ namespace FStorm.Test
         public void Setup()
         {
             var services = new ServiceCollection();
-            services.AddFStorm();
+            services.AddFStorm(MockModel.PrepareModel(), "https://my.service/odata/", new FStormOptions() { SQLCompilerType= SQLCompilerType.MSSQL});
             serviceProvider = services.BuildServiceProvider();
         }
 
 
         [Test]
-        public void It_should_parse_entity_set()
+        public void It_should_parse_path_to_collection()
         {
-            var _FStormService = serviceProvider.GetService<FStormService>();
-            var statement = _FStormService.Get().Path("Order").ToSQLString();
-            Assert.AreEqual("",statement);
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService
+                .Get(new GetConfiguration() { ResourcePath = "Customers" })
+                .ToSQL();
+
+            string expected = "SELECT [#/Customer].[CustomerID] AS [#/Customer/ID], [#/Customer].[RagSoc] AS [#/Customer/RagSoc] FROM [TABCustomers] AS [#/Customer]";
+            Assert.That(_SqlQuery.Statement, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void It_should_parse_path_to_entity()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService
+                .Get(new GetConfiguration() { ResourcePath = "Customers(1)" })
+                .ToSQL();
+
+            string expected = "SELECT [#/Customer].[CustomerID] AS [#/Customer/ID], [#/Customer].[RagSoc] AS [#/Customer/RagSoc] FROM [TABCustomers] AS [#/Customer] WHERE [#/Customer].[CustomerID] = @p0";
+            Assert.That(_SqlQuery.Statement, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void It_should_parse_path_to_structural_property()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService
+                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/RagSoc" })
+                .ToSQL();
+
+            string expected = "SELECT [#/Customer].[RagSoc] AS [#/Customer/RagSoc] FROM [TABCustomers] AS [#/Customer] WHERE [#/Customer].[CustomerID] = @p0";
+            Assert.That(_SqlQuery.Statement, Is.EqualTo(expected));
         }
 
     }

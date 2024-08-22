@@ -1,55 +1,52 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Generic;
+using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
+using SqlKata;
+using SqlKata.Compilers;
 
 namespace FStorm
 {
     public static class ServiceCollectionExtensions
     {
-        public static void AddFStorm(this IServiceCollection services)
+        public static void AddFStorm(this IServiceCollection services, EdmModel model, string serviceRoot, FStormOptions options)
         {
-            services.AddSingleton<FStormService>();
+            services.AddSingleton(p => new FStormService(p, model, serviceRoot, options));
             services.AddTransient<GetCommand>();
         }
     }
 
+    public enum SQLCompilerType
+    {
+        MSSQL
+    }
+
+
+    public class FStormOptions
+    {
+        public SQLCompilerType SQLCompilerType { get; set; }
+    }
+
     public class FStormService
     {
-
         IServiceProvider serviceProvider;
-        public FStormService(IServiceProvider serviceProvider) {
+        internal readonly FStormOptions options;
+
+        public FStormService(IServiceProvider serviceProvider, EdmModel model, string serviceRoot, FStormOptions options) {
             this.serviceProvider = serviceProvider;
+            Model = model;
+            this.options = options;
+            ServiceRoot = new Uri(serviceRoot);
         }
 
-        public GetCommand Get() => serviceProvider.GetService<GetCommand>();
-    }
+        public EdmModel Model { get; }
+        public Uri ServiceRoot { get; }
 
-    public class Command
-    {
-        public readonly string CommandId;
-        protected readonly IServiceProvider serviceProvider;
-
-        public Command(IServiceProvider serviceProvider) 
-        {
-            CommandId = Guid.NewGuid().ToString();
-            this.serviceProvider = serviceProvider;
+        public GetCommand Get(GetConfiguration configuration)  
+        { 
+            var cmd = serviceProvider.GetService<GetCommand>()!; 
+            cmd.Configuration= configuration;
+            return cmd;
         }
-
-        public virtual string ToSQLString()
-        {
-            return String.Empty;
-        }
-    }
-
-
-    public class GetCommand :Command
-    {
-        public GetCommand(IServiceProvider serviceProvider) : base(serviceProvider) { }
-
-        public GetCommand Path(params string[] path) 
-        {
-            return this;
-        }
-
     }
 
 }
