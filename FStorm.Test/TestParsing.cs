@@ -58,5 +58,67 @@ namespace FStorm.Test
             Assert.That(_SqlQuery.Statement, Is.EqualTo(expected));
         }
 
+
+        [Test]
+        public void It_should_parse_path_to_nav_prop_n_cardinality()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService
+                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders" })
+                .ToSQL();
+
+            string expected = @"SELECT [#/Customer/Orders].[OrderNumber] AS [#/Customer/Orders/Number], [#/Customer/Orders].[OrderDate] AS [#/Customer/Orders/OrderDate], [#/Customer/Orders].[Note] AS [#/Customer/Orders/Note], [#/Customer/Orders].[CustomerID] AS [#/Customer/Orders/CustomerID] FROM [TABCustomers] AS [#/Customer] INNER JOIN [TABOrders] AS [#/Customer/Orders] ON [#/Customer].[CustomerID] = [#/Customer/Orders].[CustomerID] WHERE [#/Customer].[CustomerID] = @p0";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void It_should_parse_path_to_nav_prop_n_cardinality_with_id()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService
+                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders('O24-01')" })
+                .ToSQL();
+
+            string expected = @"SELECT [#/Customer/Orders].[OrderNumber] AS [#/Customer/Orders/Number], [#/Customer/Orders].[OrderDate] AS [#/Customer/Orders/OrderDate], [#/Customer/Orders].[Note] AS [#/Customer/Orders/Note], [#/Customer/Orders].[CustomerID] AS [#/Customer/Orders/CustomerID] FROM [TABCustomers] AS [#/Customer] INNER JOIN [TABOrders] AS [#/Customer/Orders] ON [#/Customer].[CustomerID] = [#/Customer/Orders].[CustomerID] WHERE [#/Customer].[CustomerID] = @p0 AND [#/Customer/Orders].[OrderNumber] = @p1";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void It_should_parse_path_to_nav_prop_n_cardinality_with_id_to_structured_prop()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService
+                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders('O24-01')/OrderDate" })
+                .ToSQL();
+
+            string expected = @"SELECT [#/Customer/Orders].[OrderDate] AS [#/Customer/Orders/OrderDate] FROM [TABCustomers] AS [#/Customer] INNER JOIN [TABOrders] AS [#/Customer/Orders] ON [#/Customer].[CustomerID] = [#/Customer/Orders].[CustomerID] WHERE [#/Customer].[CustomerID] = @p0 AND [#/Customer/Orders].[OrderNumber] = @p1";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void It_should_parse_path_to_nav_prop_n_cardinality_with_id_to_nav_prop()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService
+                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders('O24-01')/Customer" })
+                .ToSQL();
+
+            string expected = @"SELECT [#/Customer/Orders/Customer].[CustomerID] AS [#/Customer/Orders/Customer/ID], [#/Customer/Orders/Customer].[RagSoc] AS [#/Customer/Orders/Customer/RagSoc] FROM [TABCustomers] AS [#/Customer] INNER JOIN [TABOrders] AS [#/Customer/Orders] ON [#/Customer].[CustomerID] = [#/Customer/Orders].[CustomerID]INNER JOIN [TABCustomers] AS [#/Customer/Orders/Customer] ON [#/Customer/Orders].[CustomerID] = [#/Customer/Orders/Customer].[CustomerID] WHERE [#/Customer].[CustomerID] = @p0 AND [#/Customer/Orders].[OrderNumber] = @p1";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+
+        [Test]
+        public void It_should_parse_path_to_nav_prop_1_cardinality()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService
+                .Get(new GetConfiguration() { ResourcePath = "Orders('O24-01')/Customer" })
+                .ToSQL();
+
+            string expected = @"SELECT [#/Order/Customer].[CustomerID] AS [#/Order/Customer/ID], [#/Order/Customer].[RagSoc] AS [#/Order/Customer/RagSoc] FROM [TABOrders] AS [#/Order] INNER JOIN [TABCustomers] AS [#/Order/Customer] ON [#/Order].[CustomerID] = [#/Order/Customer].[CustomerID] WHERE [#/Order].[OrderNumber] = @p0";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
     }
 }

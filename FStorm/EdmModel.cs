@@ -164,6 +164,20 @@ namespace FStorm
             edmEntityType.AddKeys(customerKey);
         }
 
+        public void AddNavigationProperty(string name, IEdmEntityType targetType, EdmMultiplicity multiplicity, IEdmStructuralProperty sourceProperty, IEdmStructuralProperty targetProperty)
+        {
+            edmEntityType.AddUnidirectionalNavigation(new EdmNavigationPropertyInfo()
+            {
+                Name = name,
+                ContainsTarget = multiplicity == EdmMultiplicity.One ? true : false,
+                Target = targetType,
+                TargetMultiplicity = multiplicity,
+                PrincipalProperties = new List<IEdmStructuralProperty>() { sourceProperty },
+                DependentProperties = new List<IEdmStructuralProperty>() { targetProperty },
+                OnDelete = EdmOnDeleteAction.None
+            });
+        }
+
         #region "Interface implementation"
         public IEnumerable<IEdmStructuralProperty> DeclaredKey => ((IEdmEntityType)edmEntityType).DeclaredKey;
 

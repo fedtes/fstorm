@@ -1,8 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OData.Edm;
-using Microsoft.OData.UriParser;
-using SqlKata;
-using SqlKata.Compilers;
 
 namespace FStorm
 {
@@ -11,7 +7,14 @@ namespace FStorm
         public static void AddFStorm(this IServiceCollection services, EdmModel model, string serviceRoot, FStormOptions options)
         {
             services.AddSingleton(p => new FStormService(p, model, serviceRoot, options));
+            services.AddSingleton<EdmPathFactory>();
             services.AddTransient<GetCommand>();
+            services.AddTransient<GetCompiler>();
+            services.AddTransient<PathCompiler>();
+            services.AddTransient<ResourceRootCompiler>();
+            services.AddTransient<NavigationPropertyCompiler>();
+            services.AddTransient<SelectPropertyCompiler>();
+            services.AddTransient<BinaryFilterCompiler>();
         }
     }
 

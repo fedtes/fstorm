@@ -1,80 +1,81 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 namespace FStorm.Test
 {
     internal class TestEdmPath
     {
-        [Test]
-        public void It_should_create_empty_path()
+        IServiceProvider serviceProvider;
+
+        [TearDown()]
+        public void TearDown()
         {
-            var path = new EdmPath();
-            Assert.False(path.HasValue());
-            Assert.That(path.Count(), Is.EqualTo(0));
+            if (serviceProvider is IDisposable disposable)
+                disposable.Dispose();
+        }
+
+        [SetUp]
+        public void Setup()
+        {
+            var services = new ServiceCollection();
+            services.AddFStorm(MockModel.PrepareModel(), "https://my.service/odata/", new FStormOptions() { SQLCompilerType = SQLCompilerType.MSSQL });
+            serviceProvider = services.BuildServiceProvider();
         }
 
 
         [Test]
         public void It_should_create_1_entity_path()
         {
-            var path = new EdmPath("MyEntity");
-            Assert.True(path.HasValue());
-            Assert.That(path.GetEntityName(), Is.EqualTo("MyEntity"));
+            var factory = serviceProvider.GetService<EdmPathFactory>()!;
+            var path = factory.CreateResourcePath("Customers");
+            Assert.That(path.ToString(), Is.EqualTo("#/Customers"));
         }
 
-        [Test]
-        public void It_should_create_1_entity_withId_path()
-        {
-            var path = new EdmPath("MyEntity(5)");
-            Assert.True(path.HasValue());
-            Assert.True(path.HasId());
-            Assert.That(path.GetEntityName(), Is.EqualTo("MyEntity"));
-            Assert.That(path.GetId(), Is.EqualTo("5"));
-        }
-
-        [Test]
-        public void It_should_create_1_entity_with_quoted_Id_path()
-        {
-            var path = new EdmPath("My_Entity('abcde')");
-            Assert.True(path.HasValue());
-            Assert.True(path.HasId());
-            Assert.That(path.GetEntityName(), Is.EqualTo("My_Entity"));
-            Assert.That(path.GetId(), Is.EqualTo("abcde"));
-        }
 
         [Test]
         public void It_should_create_complete_path()
         {
-            var path = new EdmPath("My_Entity('abcde')", "SubEntity");
-            Assert.False(path.HasValue());
-            Assert.False(path.HasId());
-            Assert.That(path.Count(), Is.EqualTo(2));
-            Assert.That(path.ToString(), Is.EqualTo("My_Entity('abcde')/SubEntity"));
+            var factory = serviceProvider.GetService<EdmPathFactory>()!;
+            var path = factory.CreateResourcePath("Customers", "Orders");
+            Assert.That(path.ToString(), Is.EqualTo("#/Customers/Orders"));
         }
 
 
         [Test]
         public void It_should_combine_path()
         {
-            var path = new EdmPath("My_Entity('abcde')") + new EdmPath("SubEntity");
-            Assert.False(path.HasValue());
-            Assert.False(path.HasId());
-            Assert.That(path.Count(), Is.EqualTo(2));
-            Assert.That(path.ToString(), Is.EqualTo("My_Entity('abcde')/SubEntity"));
+            var factory = serviceProvider.GetService<EdmPathFactory>()!;
+            var path = factory.CreateResourcePath("Customers");
+            var path1 = path + "Orders";
+            Assert.That(path.ToString(), Is.EqualTo("#/Customers"));
+            Assert.That(path1.ToString(), Is.EqualTo("#/Customers/Orders"));
+        }
+
+        [Test]
+        public void It_should_pop_from_path()
+        {
+            var factory = serviceProvider.GetService<EdmPathFactory>()!;
+            var path = factory.CreateResourcePath("Customers");
+            var path1 = path + "Orders";
+            var path2 = path1 - 1;
+            Assert.That(path.ToString(), Is.EqualTo("#/Customers"));
+            Assert.That(path1.ToString(), Is.EqualTo("#/Customers/Orders"));
+            Assert.That(path2.ToString(), Is.EqualTo("#/Customers"));
+        }
+
+        [Test]
+        public void It_should_throw_on_invalid_pop_len()
+        {
+            var factory = serviceProvider.GetService<EdmPathFactory>()!;
+            var path = factory.CreateResourcePath("Customers") + "Orders";
+            Assert.Throws<ArgumentException>(() => { var x = path - 3; });
         }
 
 
         [Test]
-        public void It_should_combine_path_2()
+        public void It_should_throw_on_wrong_segment_format()
         {
-            var path = new EdmPath("My_Entity('abcde')", "SubEntity") + new EdmPath("SubEntity2");
-            Assert.False(path.HasValue());
-            Assert.False(path.HasId());
-            Assert.That(path.Count(), Is.EqualTo(3));
-            Assert.That(path.ToString(), Is.EqualTo("My_Entity('abcde')/SubEntity/SubEntity2"));
+            var factory = serviceProvider.GetService<EdmPathFactory>()!;
+            Assert.Throws<ArgumentException>(() => factory.CreateResourcePath("Cus/tomers"));
         }
 
     }

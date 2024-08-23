@@ -1,5 +1,4 @@
-﻿using Microsoft.OData.UriParser;
-using SqlKata.Compilers;
+﻿using SqlKata.Compilers;
 using SqlKata;
 using Microsoft.OData.Edm;
 
@@ -69,77 +68,36 @@ namespace FStorm
 
     public class GetCommand : Command
     {
-        public GetCommand(IServiceProvider serviceProvider, FStormService fStormService) : base(serviceProvider, fStormService)
-        { }
+        private readonly GetCompiler compiler;
+        private readonly SelectPropertyCompiler selectPropertyCompiler;
+
+        public GetCommand(
+            IServiceProvider serviceProvider,
+            FStormService fStormService,
+            GetCompiler compiler,
+            SelectPropertyCompiler selectPropertyCompiler) : base(serviceProvider, fStormService)
+        {
+            this.compiler = compiler;
+            this.selectPropertyCompiler = selectPropertyCompiler;
+        }
 
         internal GetConfiguration Configuration { get; set; } = null!;
 
-        private enum ResultType
-        {
-            Collection,
-            Object,
-            Property
-        }
-
         public override SQLCompiledQuery ToSQL()
         {
-            ODataUriParser parser = new ODataUriParser(fStormService.Model, fStormService.ServiceRoot, new Uri(fStormService.ServiceRoot, Configuration.ResourcePath));
-            ODataPath path = parser.ParsePath();
+            var context = compiler.Compile(new CompilerContext<GetConfiguration>() { ContextData = Configuration });
 
-            Query query = new Query();
-
-            int index = 0;
-            string table_alias = "#";
-            ResultType result = ResultType.Collection;
-
-            foreach (var segment in path)
+            if (context.ResourceType == ResourceType.Object || context.ResourceType == ResourceType.Collection)
             {
-                switch (segment)
+                foreach (EdmStructuralProperty p in (context.ResourceEdmType.AsElementType() as EdmEntityType)!.StructuralProperties().Cast<EdmStructuralProperty>())
                 {
-                    case EntitySetSegment collection:
-                        if (index == 0)
-                        {
-                            var _type = (collection.EdmType.AsElementType() as EdmEntityType)!;
-                            table_alias += "/" + _type.Name;
-                            query.From(_type.Table + $" as {table_alias}");
-                        }
-                        else
-                        {
-                            throw new NotImplementedException("Should not pass here");
-                        }
-                        result = ResultType.Collection;
-                        break;
-                    case KeySegment single:
-
-                        var k = single.Keys.First();
-                        EdmStructuralProperty keyProperty = (EdmStructuralProperty)((EdmEntityType)single.EdmType).DeclaredKey.First(x => x.Name == k.Key);
-                        query.Where($"{table_alias}.{keyProperty.columnName}", k.Value);
-                        result = ResultType.Object;
-
-                        break;
-                    case PropertySegment property:
-
-                        var _prop = (property.Property as EdmStructuralProperty)!;
-                        query.Select($"{table_alias}." + _prop.columnName + $" as {table_alias}/{_prop.Name}");
-                        result = ResultType.Property;
-
-                        break;
-                    default:
-                        throw new NotImplementedException("Should not pass here");
-                }
-
-                index++;
-            }
-
-            if (result == ResultType.Object || result == ResultType.Collection)
-            {
-                foreach (EdmStructuralProperty p in (path.LastSegment.EdmType.AsElementType() as EdmEntityType)!.StructuralProperties())
-                {
-                    query.Select($"{table_alias}." + p.columnName + $" as {table_alias}/{p.Name}");
+                    selectPropertyCompiler
+                        .Compile(context.CloneTo(new ReferenceToProperty() { property = p, path = context.ResourcePath }))
+                        .CopyTo(context);
                 }
             }
 
-            return Compile(query);
+            return Compile(context.Query);
         }
 
     }

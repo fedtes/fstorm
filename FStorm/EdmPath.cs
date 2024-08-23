@@ -1,103 +1,117 @@
 ﻿using System.Collections;
-using System.Text.RegularExpressions;
 
 namespace FStorm
 {
-    public class EdmPath : IEnumerable<EdmPath>
+    public class EdmSegment
     {
-        static Regex entitySetIdentifier = new Regex("^(?'entity'[_a-zA-Z][.a-zA-Z0-9_]{0,127}$)");
-        static Regex singleEntityIdentifier = new Regex("^(?'entity'[_a-zA-Z][.a-zA-Z0-9_]{0,127})[(](?'id'[a-zA-Z0-9_]{1,128})[)]$");
-        static Regex quotedSingleEntityIdentifier = new Regex("^(?'entity'[_a-zA-Z][.a-zA-Z0-9_]{0,127})[(]'(?'id'[a-zA-Z0-9_]{1,128})'[)]$");
+        public string Identifier { get; }
 
-        readonly string? value;
-        EdmPath[] _tokens;
-
-        public EdmPath()
+        internal EdmSegment(string identifier) 
         {
-            _tokens = new EdmPath[0];
-            value = null;
+            if (String.IsNullOrEmpty(identifier)) { throw new ArgumentNullException("identifier"); }
+            if (identifier.Contains("/")) { throw new ArgumentException("Identifier cannot have / character"); }
+            Identifier = identifier;
         }
 
-        public EdmPath(params string[] tokens){
-            _tokens = tokens.Select(x => new EdmPath(x)).ToArray();
-        }
+        public override string ToString() => Identifier;
+    }
 
-        public EdmPath(string token)
+    public abstract class EdmPath : IEnumerable<EdmSegment>
+    {
+        protected List<EdmSegment> _segments;
+        protected readonly FStormService fStormService;
+
+        internal EdmPath(FStormService fStormService)
         {
-            if (!entitySetIdentifier.IsMatch(token) && !singleEntityIdentifier.IsMatch(token) && !quotedSingleEntityIdentifier.IsMatch(token))
-            {
-                throw new ArgumentException("Invalid format");
-            }
-            value = token;
-            _tokens = new EdmPath[] {this};
+            this.fStormService = fStormService;
+            _segments = new List<EdmSegment>();
         }
 
-        public EdmPath(EdmPath[] tokens){
-            if (tokens == null) 
-                throw new ArgumentNullException(nameof(tokens));
-            _tokens = tokens;
-        }
-
-        public static EdmPath operator +(EdmPath x, EdmPath y) 
-        { 
-            if (x.Count() == 0)
-                return y;
-            if (y.Count() == 0)
-                return x;
-
-            return new EdmPath(x._tokens.Concat(y._tokens).ToArray()); 
-        }
-
-        public bool HasValue() => value != null;
-
-        public bool HasId() => HasValue() && (singleEntityIdentifier.IsMatch(value) || quotedSingleEntityIdentifier.IsMatch(value));
-
-        public string GetEntityName()
+        internal EdmPath(FStormService fStormService, params string[] segments)
         {
-            if (!HasValue())
-                throw new ArgumentException("This path element don't have a single value");
-
-            if (entitySetIdentifier.IsMatch(value))
-                return entitySetIdentifier.Match(value).Groups["entity"].Value;
-
-            if (singleEntityIdentifier.IsMatch(value))
-                return singleEntityIdentifier.Match(value).Groups["entity"].Value;
-
-            if (quotedSingleEntityIdentifier.IsMatch(value))
-                return quotedSingleEntityIdentifier.Match(value).Groups["entity"].Value;
-
-            throw new ArgumentException("This path element don't have a single value");
+            _segments = segments.Select(x => new EdmSegment(x)).ToList();
+            this.fStormService = fStormService;
         }
 
-        public string GetId()
+        internal EdmPath(FStormService fStormService, params EdmSegment[] segments)
         {
-            if (!HasId()) 
-                throw new ArgumentException("This path element don't have an id");
-
-            if (singleEntityIdentifier.IsMatch(value)) 
-                return singleEntityIdentifier.Match(value).Groups["id"].Value;
-
-            if (quotedSingleEntityIdentifier.IsMatch(value))
-                return quotedSingleEntityIdentifier.Match(value).Groups["id"].Value;
-
-            throw new ArgumentException("This path element don't have an id");
+            this.fStormService = fStormService;
+            _segments = segments.ToList();
         }
 
-        public override string ToString()
+        public static EdmPath operator +(EdmPath x, EdmSegment y)
         {
-            if (_tokens.Length == 0) return string.Empty;
-            if (_tokens.Length == 1) return (value??String.Empty);
-            return String.Join("/", _tokens.Select(x => x.ToString()).Where(x => !String.IsNullOrEmpty(x)));
+            var x1 = x.Clone();
+            x1._segments.Add(y);
+            return x1;
         }
 
-        public IEnumerator<EdmPath> GetEnumerator()
+        public static EdmPath operator -(EdmPath x, int segmentCount)
         {
-            return ((IEnumerable<EdmPath>)_tokens).GetEnumerator();
+            if (segmentCount >= x._segments.Count) { throw new ArgumentException($"Cannot subtract more than {x._segments.Count} segments."); }
+            var x1 = x.Clone();
+            x1._segments = x1._segments.Take(x1._segments.Count - segmentCount).ToList();
+            return x1;
+        }
+
+        public static EdmPath operator +(EdmPath x, string segment) => x + new EdmSegment(segment);
+
+        public static bool operator ==(EdmPath x, EdmPath y) => x.ToString().Equals(y.ToString());
+
+        public static bool operator !=(EdmPath x, EdmPath y) => !(x==y);
+
+        public abstract EdmPath Clone();
+
+        public override string ToString() => String.Join("/", _segments.Select(x => x.ToString()));
+
+        public IEnumerator<EdmSegment> GetEnumerator()
+        {
+            return ((IEnumerable<EdmSegment>)_segments).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return _tokens.GetEnumerator();
+            return _segments.GetEnumerator();
+        }
+
+        public override bool Equals(object? obj) => obj != null && GetType() == obj.GetType() && ToString().Equals(obj.ToString());
+
+        public override int GetHashCode() => ToString().GetHashCode();
+    }
+
+    public class EdmResourcePath : EdmPath
+    {
+        internal EdmResourcePath(FStormService fStormService) : base(fStormService) { }
+        internal EdmResourcePath(FStormService fStormService, params string[] segments) : base(fStormService,segments) { }
+
+        internal EdmResourcePath(FStormService fStormService, params EdmSegment[] segments) : base(fStormService,segments) { }
+
+        public override EdmPath Clone() => new EdmResourcePath(fStormService, this._segments.ToArray());
+
+        public override string ToString() => "#/" + base.ToString();
+    }
+
+    public class EdmPathFactory
+    {
+        private readonly FStormService fStormService;
+
+        public EdmPathFactory(FStormService fStormService)
+        {
+            this.fStormService = fStormService;
+        }
+        public EdmResourcePath CreateResourcePath() => new EdmResourcePath(fStormService);
+        public EdmResourcePath CreateResourcePath(params string[] segments) => new EdmResourcePath(fStormService, segments);
+        public EdmResourcePath CreateResourcePath(params EdmSegment[] segments) => new EdmResourcePath(fStormService, segments);
+
+        public EdmPath Parse(string path)
+        {
+            if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path));
+            if (path.StartsWith("#"))
+            {
+                return new EdmResourcePath(fStormService, path.Substring(2).Split("/"));
+            }
+
+            throw new ArgumentException("Invalid path");
         }
     }
 
