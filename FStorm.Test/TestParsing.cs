@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FStorm.Test
 {
@@ -17,7 +18,7 @@ namespace FStorm.Test
         public void Setup()
         {
             var services = new ServiceCollection();
-            services.AddFStorm(MockModel.PrepareModel(), "https://my.service/odata/", new FStormOptions() { SQLCompilerType= SQLCompilerType.MSSQL});
+            services.AddFStorm(MockModel.PrepareModel(), new FStormOptions() { SQLCompilerType= SQLCompilerType.MSSQL , ServiceRoot= "https://my.service/odata/", SQLConnection= new SqliteConnection() });
             serviceProvider = services.BuildServiceProvider();
         }
 
@@ -27,6 +28,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService
+                .OpenConnection()
                 .Get(new GetConfiguration() { ResourcePath = "Customers" })
                 .ToSQL();
 
@@ -39,6 +41,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService
+                .OpenConnection()
                 .Get(new GetConfiguration() { ResourcePath = "Customers(1)" })
                 .ToSQL();
 
@@ -50,7 +53,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_structural_property()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService
+            var _SqlQuery = _FStormService.OpenConnection()
                 .Get(new GetConfiguration() { ResourcePath = "Customers(1)/RagSoc" })
                 .ToSQL();
 
@@ -63,7 +66,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_n_cardinality()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService
+            var _SqlQuery = _FStormService.OpenConnection()
                 .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders" })
                 .ToSQL();
 
@@ -75,7 +78,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_n_cardinality_with_id()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService
+            var _SqlQuery = _FStormService.OpenConnection()
                 .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders('O24-01')" })
                 .ToSQL();
 
@@ -87,7 +90,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_n_cardinality_with_id_to_structured_prop()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService
+            var _SqlQuery = _FStormService.OpenConnection()
                 .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders('O24-01')/OrderDate" })
                 .ToSQL();
 
@@ -99,7 +102,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_n_cardinality_with_id_to_nav_prop()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService
+            var _SqlQuery = _FStormService.OpenConnection()
                 .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders('O24-01')/Customer" })
                 .ToSQL();
 
@@ -112,7 +115,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_1_cardinality()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService
+            var _SqlQuery = _FStormService.OpenConnection() 
                 .Get(new GetConfiguration() { ResourcePath = "Orders('O24-01')/Customer" })
                 .ToSQL();
 

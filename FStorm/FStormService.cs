@@ -1,14 +1,18 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using System.Data.Common;
 
 namespace FStorm
 {
     public static class ServiceCollectionExtensions
     {
-        public static void AddFStorm(this IServiceCollection services, EdmModel model, string serviceRoot, FStormOptions options)
+        public static void AddFStorm(this IServiceCollection services, EdmModel model, FStormOptions options)
         {
-            services.AddSingleton(p => new FStormService(p, model, serviceRoot, options));
+            services.AddSingleton(p => new FStormService(p, model, options));
             services.AddSingleton<EdmPathFactory>();
+            services.AddTransient<Connection>();
+            services.AddTransient<Transaction>();
             services.AddTransient<GetCommand>();
+            services.AddTransient<Writer>();
             services.AddTransient<GetCompiler>();
             services.AddTransient<PathCompiler>();
             services.AddTransient<ResourceRootCompiler>();
@@ -20,13 +24,23 @@ namespace FStorm
 
     public enum SQLCompilerType
     {
-        MSSQL
+        MSSQL,
+        SQLLite
     }
 
 
     public class FStormOptions
     {
         public SQLCompilerType SQLCompilerType { get; set; }
+
+        public string ServiceRoot { get; set; }
+
+        public DbConnection? SQLConnection { get; set; }
+
+        public FStormOptions()
+        {
+            ServiceRoot = "http://localhost/";
+        }
     }
 
     public class FStormService
@@ -34,21 +48,30 @@ namespace FStorm
         IServiceProvider serviceProvider;
         internal readonly FStormOptions options;
 
-        public FStormService(IServiceProvider serviceProvider, EdmModel model, string serviceRoot, FStormOptions options) {
+        public FStormService(IServiceProvider serviceProvider, EdmModel model, FStormOptions options) {
             this.serviceProvider = serviceProvider;
             Model = model;
             this.options = options;
-            ServiceRoot = new Uri(serviceRoot);
+            ServiceRoot = new Uri(options.ServiceRoot);
         }
 
         public EdmModel Model { get; }
-        public Uri ServiceRoot { get; }
+        public Uri ServiceRoot { get; }      
 
-        public GetCommand Get(GetConfiguration configuration)  
-        { 
-            var cmd = serviceProvider.GetService<GetCommand>()!; 
-            cmd.Configuration= configuration;
-            return cmd;
+        public Connection OpenConnection()
+        {
+            var con = serviceProvider.GetService<Connection>()!;
+            con.connection = this.options.SQLConnection!;
+            con.Open();
+            return con;
+        }
+
+        public async Task<Connection> OpenConnectionAsync()
+        {
+            var con = serviceProvider.GetService<Connection>()!;
+            con.connection = this.options.SQLConnection!;
+            await con.OpenAsync();
+            return con;
         }
     }
 

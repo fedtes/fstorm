@@ -1,4 +1,5 @@
-﻿using Microsoft.OData.Edm;
+﻿using Microsoft.Data.Sqlite;
+using Microsoft.OData.Edm;
 
 namespace FStorm.Test
 {
@@ -32,6 +33,24 @@ namespace FStorm.Test
             container.AddEntitySet("Orders", orderType);
 
             return edm;
+        }
+    
+    
+        public static void CreateDB(SqliteConnection sqlite)
+        {
+            var t = sqlite.BeginTransaction();
+            var cmd = sqlite.CreateCommand();
+            cmd.CommandText = "CREATE TABLE TABCustomers (CustomerID INT NOT NULL, RagSoc CHAR(50) NOT NULL);";
+            cmd.Transaction = t;
+            cmd.ExecuteNonQuery();
+            t.Commit();
+
+            var t1 = sqlite.BeginTransaction();
+            var cmd1 = sqlite.CreateCommand();
+            cmd.CommandText = "INSERT INTO TABCustomers (CustomerID,RagSoc) VALUES (1, 'ACME'),(2, 'ECorp'),(3, 'DreamSolutions');";
+            cmd.Transaction = t1;
+            cmd.ExecuteNonQuery();
+            t1.Commit();
         }
     }
 }
