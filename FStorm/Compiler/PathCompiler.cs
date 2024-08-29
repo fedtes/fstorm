@@ -39,11 +39,12 @@ namespace FStorm
                         {
                             if (!isRoot)
                                 throw new NotImplementedException("Should not pass here");
-                            
+                            var _edmType = (collection.EdmType.AsElementType() as EdmEntityType)!;
                             fromCompiler
-                                .Compile(context.CloneTo(collection.EdmType.AsElementType() as EdmEntityType)!)
+                                .Compile(context.CloneTo(_edmType)!)
                                 .CopyTo(context);
                             context.Resource.ResourceType= ResourceType.Collection;
+                            context.Resource.ResourceEdmType = _edmType;
                             break;
                         }
                     case KeySegment single:
@@ -69,6 +70,9 @@ namespace FStorm
                             navigationPropertyCompiler
                                 .Compile(context.CloneTo(navigationProperty.NavigationProperty as EdmNavigationProperty)!)
                                 .CopyTo(context);
+
+                            var _edmType = (navigationProperty.NavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!;
+                            context.Resource.ResourceEdmType = _edmType;
                             context.Resource.ResourceType = ResourceType.Collection;
                             break;
                         }
@@ -77,7 +81,10 @@ namespace FStorm
                             navigationPropertyCompiler
                                 .Compile(context.CloneTo(navigationProperty.NavigationProperty as EdmNavigationProperty)!)
                                 .CopyTo(context);
+
+                            var _edmType = (navigationProperty.NavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!;
                             context.Resource.ResourceType = ResourceType.Object;
+                            context.Resource.ResourceEdmType = _edmType;
                             break;
                         }
                     default:

@@ -98,7 +98,7 @@ namespace FStorm
             }
         }
 
-        public GetCommand Get(GetConfiguration configuration)
+        public GetCommand Get(GetRequest configuration)
         {
             var cmd = serviceProvider.GetService<GetCommand>()!;
             cmd.Configuration = configuration;

@@ -15,20 +15,20 @@ namespace FStorm
         internal Transaction? transaction;
 
         protected readonly IServiceProvider serviceProvider;
-        protected readonly FStormService fStormService;
+        protected readonly FStormService fsService;
 
         public Command(IServiceProvider serviceProvider, FStormService fStormService) 
         {
             CommandId = Guid.NewGuid().ToString();
             this.serviceProvider = serviceProvider;
-            this.fStormService = fStormService;
+            this.fsService = fStormService;
         }
 
         public abstract SQLCompiledQuery ToSQL();
 
-        protected virtual SQLCompiledQuery Compile(CompilerContext<GetConfiguration> context) 
+        protected virtual SQLCompiledQuery Compile(CompilerContext<GetRequest> context) 
         {
-            Compiler compiler = fStormService.options.SQLCompilerType switch
+            Compiler compiler = fsService.options.SQLCompilerType switch
             {
                 SQLCompilerType.MSSQL => new SqlServerCompiler(),
                 SQLCompilerType.SQLLite => new SqliteCompiler(),
@@ -42,10 +42,10 @@ namespace FStorm
 
     public class SQLCompiledQuery
     {
-        public CompilerContext<GetConfiguration> Context { get; }
+        public CompilerContext<GetRequest> Context { get; }
         public string Statement { get; }
         public Dictionary<string, object> Bindings { get; }
-        public SQLCompiledQuery(CompilerContext<GetConfiguration> context, string statement, Dictionary<string, object> bindings)
+        public SQLCompiledQuery(CompilerContext<GetRequest> context, string statement, Dictionary<string, object> bindings)
         {
             Context = context;
             Statement = statement;

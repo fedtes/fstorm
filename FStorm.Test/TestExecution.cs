@@ -44,11 +44,11 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var con = _FStormService.OpenConnection();
             
-            var r = await con.Get(new GetConfiguration() { ResourcePath = "Customers" }).ToListAsync();
+            var r = await con.Get(new GetRequest() { ResourcePath = "Customers" }).ToListAsync();
 
             var w = serviceProvider.GetService<Writer>()!;
             var sr = w.WriteResult(r);
-            Assert.IsTrue(false);
+            Assert.That(sr.ToString(), Is.EqualTo("{\"@odata.context\":\"https://my.service/odata/$metadata#Customers\",\"value\":[{\"ID\":1,\"RagSoc\":\"ACME\"},{\"ID\":2,\"RagSoc\":\"ECorp\"},{\"ID\":3,\"RagSoc\":\"DreamSolutions\"}]}"));
         }
 
         [Test]
@@ -57,11 +57,11 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var con = _FStormService.OpenConnection();
 
-            var r = await con.Get(new GetConfiguration() { ResourcePath = "Customers(1)" }).ToListAsync();
+            var r = await con.Get(new GetRequest() { ResourcePath = "Customers(1)" }).ToListAsync();
 
             var w = serviceProvider.GetService<Writer>()!;
             var sr = w.WriteResult(r);
-            Assert.IsTrue(false);
+            Assert.That(sr.ToString(), Is.EqualTo("{\"@odata.context\":\"https://my.service/odata/$metadata#Customers/$entity\",\"ID\":1,\"RagSoc\":\"ACME\"}"));
         }
 
         [Test]
@@ -70,11 +70,11 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var con = _FStormService.OpenConnection();
 
-            var r = await con.Get(new GetConfiguration() { ResourcePath = "Customers(1)/RagSoc" }).ToListAsync();
+            var r = await con.Get(new GetRequest() { ResourcePath = "Customers(1)/RagSoc" }).ToListAsync();
 
             var w = serviceProvider.GetService<Writer>()!;
             var sr = w.WriteResult(r);
-            Assert.IsTrue(false);
+            Assert.That(sr.ToString(), Is.EqualTo("{\"@odata.context\":\"https://my.service/odata/$metadata#Customers(1)/RagSoc\",\"RagSoc\":\"ACME\"}"));
         }
 
     }

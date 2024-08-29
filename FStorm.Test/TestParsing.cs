@@ -29,7 +29,7 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService
                 .OpenConnection()
-                .Get(new GetConfiguration() { ResourcePath = "Customers" })
+                .Get(new GetRequest() { ResourcePath = "Customers" })
                 .ToSQL();
 
             string expected = "SELECT [#/Customer].[CustomerID] AS [#/Customer/ID], [#/Customer].[RagSoc] AS [#/Customer/RagSoc] FROM [TABCustomers] AS [#/Customer]";
@@ -42,7 +42,7 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService
                 .OpenConnection()
-                .Get(new GetConfiguration() { ResourcePath = "Customers(1)" })
+                .Get(new GetRequest() { ResourcePath = "Customers(1)" })
                 .ToSQL();
 
             string expected = "SELECT [#/Customer].[CustomerID] AS [#/Customer/ID], [#/Customer].[RagSoc] AS [#/Customer/RagSoc] FROM [TABCustomers] AS [#/Customer] WHERE [#/Customer].[CustomerID] = @p0";
@@ -54,7 +54,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection()
-                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/RagSoc" })
+                .Get(new GetRequest() { ResourcePath = "Customers(1)/RagSoc" })
                 .ToSQL();
 
             string expected = "SELECT [#/Customer].[RagSoc] AS [#/Customer/RagSoc] FROM [TABCustomers] AS [#/Customer] WHERE [#/Customer].[CustomerID] = @p0";
@@ -67,7 +67,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection()
-                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders" })
+                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders" })
                 .ToSQL();
 
             string expected = @"SELECT [#/Customer/Orders].[OrderNumber] AS [#/Customer/Orders/Number], [#/Customer/Orders].[OrderDate] AS [#/Customer/Orders/OrderDate], [#/Customer/Orders].[Note] AS [#/Customer/Orders/Note], [#/Customer/Orders].[CustomerID] AS [#/Customer/Orders/CustomerID] FROM [TABCustomers] AS [#/Customer] INNER JOIN [TABOrders] AS [#/Customer/Orders] ON [#/Customer].[CustomerID] = [#/Customer/Orders].[CustomerID] WHERE [#/Customer].[CustomerID] = @p0";
@@ -79,7 +79,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection()
-                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders('O24-01')" })
+                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')" })
                 .ToSQL();
 
             string expected = @"SELECT [#/Customer/Orders].[OrderNumber] AS [#/Customer/Orders/Number], [#/Customer/Orders].[OrderDate] AS [#/Customer/Orders/OrderDate], [#/Customer/Orders].[Note] AS [#/Customer/Orders/Note], [#/Customer/Orders].[CustomerID] AS [#/Customer/Orders/CustomerID] FROM [TABCustomers] AS [#/Customer] INNER JOIN [TABOrders] AS [#/Customer/Orders] ON [#/Customer].[CustomerID] = [#/Customer/Orders].[CustomerID] WHERE [#/Customer].[CustomerID] = @p0 AND [#/Customer/Orders].[OrderNumber] = @p1";
@@ -91,7 +91,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection()
-                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders('O24-01')/OrderDate" })
+                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')/OrderDate" })
                 .ToSQL();
 
             string expected = @"SELECT [#/Customer/Orders].[OrderDate] AS [#/Customer/Orders/OrderDate] FROM [TABCustomers] AS [#/Customer] INNER JOIN [TABOrders] AS [#/Customer/Orders] ON [#/Customer].[CustomerID] = [#/Customer/Orders].[CustomerID] WHERE [#/Customer].[CustomerID] = @p0 AND [#/Customer/Orders].[OrderNumber] = @p1";
@@ -103,7 +103,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection()
-                .Get(new GetConfiguration() { ResourcePath = "Customers(1)/Orders('O24-01')/Customer" })
+                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')/Customer" })
                 .ToSQL();
 
             string expected = @"SELECT [#/Customer/Orders/Customer].[CustomerID] AS [#/Customer/Orders/Customer/ID], [#/Customer/Orders/Customer].[RagSoc] AS [#/Customer/Orders/Customer/RagSoc] FROM [TABCustomers] AS [#/Customer] INNER JOIN [TABOrders] AS [#/Customer/Orders] ON [#/Customer].[CustomerID] = [#/Customer/Orders].[CustomerID]INNER JOIN [TABCustomers] AS [#/Customer/Orders/Customer] ON [#/Customer/Orders].[CustomerID] = [#/Customer/Orders/Customer].[CustomerID] WHERE [#/Customer].[CustomerID] = @p0 AND [#/Customer/Orders].[OrderNumber] = @p1";
@@ -116,7 +116,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection() 
-                .Get(new GetConfiguration() { ResourcePath = "Orders('O24-01')/Customer" })
+                .Get(new GetRequest() { ResourcePath = "Orders('O24-01')/Customer" })
                 .ToSQL();
 
             string expected = @"SELECT [#/Order/Customer].[CustomerID] AS [#/Order/Customer/ID], [#/Order/Customer].[RagSoc] AS [#/Order/Customer/RagSoc] FROM [TABOrders] AS [#/Order] INNER JOIN [TABCustomers] AS [#/Order/Customer] ON [#/Order].[CustomerID] = [#/Order/Customer].[CustomerID] WHERE [#/Order].[OrderNumber] = @p0";

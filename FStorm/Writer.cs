@@ -6,6 +6,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using Microsoft.OData.UriParser;
 
 namespace FStorm
 {
@@ -42,47 +44,57 @@ namespace FStorm
         }
 
 
-        public string WriteResult(CommandResult<CompilerContext<GetConfiguration>> result)
+        public string WriteResult(CommandResult<CompilerContext<GetRequest>> result)
         {
             MemoryStream stream = new MemoryStream();
             Message message = new Message(stream);
             ODataMessageWriterSettings settings = new ODataMessageWriterSettings();
-            settings.ODataUri = new ODataUri { ServiceRoot = new Uri(service.options.ServiceRoot) };
+            settings.ODataUri = new ODataUri 
+            { 
+                ServiceRoot = new Uri(service.options.ServiceRoot),
+                Path = result.Context.Resource.ODataPath,
+                SelectAndExpand = null,
+                Apply = null
+            };
             ODataMessageWriter writer = new ODataMessageWriter(message, settings, service.Model);
             IEdmEntitySet entitySet = service.Model.EntityContainer.EntitySets().
                 Where(x => x.EntityType == result.Context.Resource.ResourceEdmType).First();
-            //ODataWriter odataWriter = writer.CreateODataResourceSetWriter(entitySet);
-            
 
             switch (result.Context.Resource.ResourceType)
             {
                 case ResourceType.Collection:
-                    //WriteCollection(odataWriter);
+                    WriteCollection(writer.CreateODataResourceSetWriter(entitySet), result);
                     break;
                 case ResourceType.Object:
-                    WriteObject(writer.CreateODataResourceWriter(entitySet), result);
-                    break;
                 case ResourceType.Property:
-                    //WriteValue(odataWriter);
+                    WriteObject(writer.CreateODataResourceWriter(entitySet), result);
                     break;
                 default:
                     break;
             }
-
-            
-
             return Encoding.UTF8.GetString(stream.ToArray());
         }
 
-        protected ODataWriter WriteCollection(ODataWriter odataWriter) 
+        protected void WriteCollection(ODataWriter odataWriter, CommandResult<CompilerContext<GetRequest>> result) 
         {
             ODataResourceSet set = new ODataResourceSet();
             odataWriter.WriteStart(set);
+            if (result.Value != null)
+            {
+                foreach (var item in result.Value) {
+                    ODataResource entity = new ODataResource();
+                    entity.Properties= item
+                        .Select(x => new ODataProperty() { Name = x.Key.Last().ToString(), Value = x.Value })
+                        .ToList();
+                    odataWriter.WriteStart(entity);
+                    odataWriter.WriteEnd();
+                }
+
+            }
             odataWriter.WriteEnd();
-            throw new NotImplementedException();
         }
 
-        protected ODataWriter WriteObject(ODataWriter odataWriter, CommandResult<CompilerContext<GetConfiguration>> result) 
+        protected void WriteObject(ODataWriter odataWriter, CommandResult<CompilerContext<GetRequest>> result) 
         {
             ODataResource entity = new ODataResource();
             if (result.Value != null)
@@ -96,9 +108,6 @@ namespace FStorm
             }
             odataWriter.WriteStart(entity);
             odataWriter.WriteEnd();
-            return odataWriter;
         }
-        protected ODataWriter WriteValue(ODataWriter odataWriter) { throw new NotImplementedException(); }
-
     }
 }

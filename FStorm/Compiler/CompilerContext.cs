@@ -1,4 +1,6 @@
-﻿namespace FStorm
+﻿using Microsoft.OData.UriParser;
+
+namespace FStorm
 {
 
     public enum ResourceType
@@ -21,6 +23,7 @@
             public ResourceType ResourceType;
             public EdmPath ResourcePath = null!;
             public EdmEntityType? ResourceEdmType;
+            public ODataPath ODataPath = null!;
         }
 
         /// <summary>

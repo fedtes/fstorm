@@ -1,8 +1,9 @@
 ﻿using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace FStorm
 {
-    public class GetConfiguration
+    public class GetRequest
     {
         /// <summary>
         /// Path to address a collection (of entities), a single entity within a collection, a singleton, as well as a property of an entity.
@@ -14,7 +15,7 @@ namespace FStorm
         public string? OrderBy { get; set; }
         public string? Top { get; set; }
         public string? Skip { get; set; }
-        public GetConfiguration()
+        public GetRequest()
         {
             ResourcePath = String.Empty;
         }
@@ -38,11 +39,14 @@ namespace FStorm
             this.pathFactory = pathFactory;
         }
 
-        internal GetConfiguration Configuration { get; set; } = null!;
+        internal GetRequest Configuration { get; set; } = null!;
 
         public override SQLCompiledQuery ToSQL()
         {
-            var context = compiler.Compile(new CompilerContext<GetConfiguration>() { ContextData = Configuration });
+            var context = new CompilerContext<GetRequest>() { ContextData = Configuration };
+            ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.ResourcePath, UriKind.Relative));
+            context.Resource.ODataPath = parser.ParsePath();
+            context = compiler.Compile(context);
 
             if (context.Resource.ResourceType == ResourceType.Object || context.Resource.ResourceType == ResourceType.Collection)
             {
@@ -58,14 +62,14 @@ namespace FStorm
         }
 
 
-        public async Task<CommandResult<CompilerContext<GetConfiguration>>> ToListAsync()
+        public async Task<CommandResult<CompilerContext<GetRequest>>> ToListAsync()
         {
             if (connection == null || this.transaction == null)
             {
                 throw new ArgumentNullException("Either connection or transaction are null. Cannot execute query.");
             }
 
-            var _result = new CommandResult<CompilerContext<GetConfiguration>>();
+            var _result = new CommandResult<CompilerContext<GetRequest>>();
             var con = base.connection.connection;
 
             try
@@ -92,7 +96,8 @@ namespace FStorm
                         Row row = new Row();
                         for (int i = 0; i < r.FieldCount; i++)
                         {
-                            row.Add(pathFactory.Parse(r.GetName(i)), r.IsDBNull(i) ? null : r.GetValue(i));
+                            var p = pathFactory.Parse(r.GetName(i));
+                            row.Add(p, r.IsDBNull(i) ? null : Helpers.TypeConverter(r.GetValue(i), p.GetTypeKind()));
                         }
                         dt.Add(row);
                     }

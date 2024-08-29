@@ -2,7 +2,7 @@
 
 namespace FStorm
 {
-    public class GetCompiler : Compiler<GetConfiguration>
+    public class GetCompiler : Compiler<GetRequest>
     {
         private readonly PathCompiler pathCompiler;
 
@@ -11,7 +11,7 @@ namespace FStorm
             this.pathCompiler = pathCompiler;
         }
 
-        public override CompilerContext<GetConfiguration> Compile(CompilerContext<GetConfiguration> context)
+        public override CompilerContext<GetRequest> Compile(CompilerContext<GetRequest> context)
         {
             Uri resourceUri = new Uri(fStormService.ServiceRoot, context.ContextData.ResourcePath);
             ODataUriParser parser = new ODataUriParser(fStormService.Model, fStormService.ServiceRoot, resourceUri);

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Microsoft.OData.Edm;
+using System.Collections;
 
 namespace FStorm
 {
@@ -77,6 +78,8 @@ namespace FStorm
         public override bool Equals(object? obj) => obj != null && GetType() == obj.GetType() && ToString().Equals(obj.ToString());
 
         public override int GetHashCode() => ToString().GetHashCode();
+
+        public abstract EdmPrimitiveTypeKind GetTypeKind();
     }
 
     public class EdmResourcePath : EdmPath
@@ -89,6 +92,43 @@ namespace FStorm
         public override EdmPath Clone() => new EdmResourcePath(fStormService, this._segments.ToArray());
 
         public override string ToString() => "#/" + base.ToString();
+
+        public override EdmPrimitiveTypeKind GetTypeKind()
+        {
+            var result = EdmPrimitiveTypeKind.None;
+            EdmEntityType? entityType = null;
+            for (int i = 0; i < this.Count(); i++)
+            {
+                if (i == 0)
+                {
+                    var ns = fStormService.Model.DeclaredNamespaces.First();
+                    entityType = (EdmEntityType?)fStormService.Model.FindDeclaredType(ns + "." + _segments[i].ToString()).AsActualType();
+                }
+                else if (i == this.Count() - 1)
+                {
+                    var prop = entityType.Properties().First(x => x.Name == _segments[i].ToString());
+                    if (prop != null && prop.PropertyKind == EdmPropertyKind.Structural)
+                    {
+                        var _type = (prop as IEdmStructuralProperty).Type;
+                        result = _type switch
+                        {
+                            EdmPrimitiveTypeReference primitive => primitive.PrimitiveKind(),
+                            _ => EdmPrimitiveTypeKind.None
+                        };
+                    }
+                    else
+                    {
+                        result = EdmPrimitiveTypeKind.None;
+                    }
+                }
+                else
+                {
+                    var navProp = entityType.DeclaredNavigationProperties().First(x => x.Name == _segments[i].ToString());
+                    entityType = (EdmEntityType?)navProp.Type.ToStructuredType()!;
+                }
+            }
+            return result;
+        }
     }
 
     public class EdmPathFactory
