@@ -16,4 +16,10 @@
     }
 
 
+    public class TableOrQuery
+    {
+        public bool IsTable = true;
+        public EdmEntityType? Type;
+        public EdmPath Alias = null!;
+    }
 }

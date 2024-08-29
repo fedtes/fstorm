@@ -7,7 +7,10 @@ namespace FStorm
     public class Row : IDictionary<EdmPath, object?>
     {
         public Dictionary<EdmPath, object?> Cells { get; } = new Dictionary<EdmPath, object?>();
-
+        
+        
+        
+        #region "IDictionary"
         public object? this[EdmPath key] { get => ((IDictionary<EdmPath, object?>)Cells)[key]; set => ((IDictionary<EdmPath, object?>)Cells)[key] = value; }
 
         public ICollection<EdmPath> Keys => ((IDictionary<EdmPath, object?>)Cells).Keys;
@@ -72,6 +75,7 @@ namespace FStorm
         {
             return ((IEnumerable)Cells).GetEnumerator();
         }
+        #endregion
     }
 
 
@@ -81,6 +85,9 @@ namespace FStorm
 
         public List<Row> Rows { get; } = new List<Row>();
 
+        
+        
+        #region "IList"
         public int Count => ((ICollection<Row>)Rows).Count;
 
         public bool IsReadOnly => ((ICollection<Row>)Rows).IsReadOnly;
@@ -134,6 +141,7 @@ namespace FStorm
         {
             return ((IEnumerable)Rows).GetEnumerator();
         }
+        #endregion
     }
 
 }
