@@ -19,6 +19,7 @@ namespace FStorm
             services.AddTransient<NavigationPropertyCompiler>();
             services.AddTransient<SelectPropertyCompiler>();
             services.AddTransient<BinaryFilterCompiler>();
+            services.AddTransient<TableOrSubQueryCompiler>();
         }
     }
 

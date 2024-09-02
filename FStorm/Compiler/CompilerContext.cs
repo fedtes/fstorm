@@ -35,6 +35,8 @@ namespace FStorm
         /// List of all aliases used in the From clausole
         /// </summary>
         public List<EdmPath> Aliases = new List<EdmPath>();
+
+        public ResourceMetadata Resource = new ResourceMetadata();
     }
 
     /// <summary>
@@ -42,8 +44,6 @@ namespace FStorm
     /// </summary>
     public class CompilerContext<T> : CompilerContext
     {
-        public ResourceMetadata Resource = new ResourceMetadata();
-
         public T ContextData = default!;
 
         public CompilerContext<T1> CloneTo<T1>(T1 ContextData)

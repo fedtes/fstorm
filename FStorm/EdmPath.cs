@@ -80,6 +80,8 @@ namespace FStorm
         public override int GetHashCode() => ToString().GetHashCode();
 
         public abstract EdmPrimitiveTypeKind GetTypeKind();
+
+        public abstract bool IsPathToKey();
     }
 
     public class EdmResourcePath : EdmPath
@@ -93,33 +95,17 @@ namespace FStorm
 
         public override string ToString() => "#/" + base.ToString();
 
-        public override EdmPrimitiveTypeKind GetTypeKind()
+        public override bool IsPathToKey() => _segments.Last().Identifier == ":key";
+
+        private EdmEntityType? GetContainerType()
         {
-            var result = EdmPrimitiveTypeKind.None;
             EdmEntityType? entityType = null;
-            for (int i = 0; i < this.Count(); i++)
+            for (int i = 0; i < this.Count()-1; i++)
             {
                 if (i == 0)
                 {
                     var ns = fStormService.Model.DeclaredNamespaces.First();
                     entityType = (EdmEntityType?)fStormService.Model.FindDeclaredType(ns + "." + _segments[i].ToString()).AsActualType();
-                }
-                else if (i == this.Count() - 1)
-                {
-                    var prop = entityType.Properties().First(x => x.Name == _segments[i].ToString());
-                    if (prop != null && prop.PropertyKind == EdmPropertyKind.Structural)
-                    {
-                        var _type = (prop as IEdmStructuralProperty).Type;
-                        result = _type switch
-                        {
-                            EdmPrimitiveTypeReference primitive => primitive.PrimitiveKind(),
-                            _ => EdmPrimitiveTypeKind.None
-                        };
-                    }
-                    else
-                    {
-                        result = EdmPrimitiveTypeKind.None;
-                    }
                 }
                 else
                 {
@@ -127,7 +113,39 @@ namespace FStorm
                     entityType = (EdmEntityType?)navProp.Type.ToStructuredType()!;
                 }
             }
-            return result;
+            return entityType;
+        }
+
+        public override EdmPrimitiveTypeKind GetTypeKind()
+        {
+            if (IsPathToKey()) {
+                var entityType = GetContainerType();
+                var _key = entityType.DeclaredKey.First();
+                return _key.Type switch {
+                     EdmPrimitiveTypeReference primitive => primitive.PrimitiveKind(),
+                        _ => EdmPrimitiveTypeKind.None
+                };
+
+            } else {
+                var result = EdmPrimitiveTypeKind.None;
+                var entityType = GetContainerType();
+                var prop = entityType.Properties().First(x => x.Name == _segments.Last().ToString());
+                if (prop != null && prop.PropertyKind == EdmPropertyKind.Structural)
+                {
+                    var _type = (prop as IEdmStructuralProperty).Type;
+                    result = _type switch
+                    {
+                        EdmPrimitiveTypeReference primitive => primitive.PrimitiveKind(),
+                        _ => EdmPrimitiveTypeKind.None
+                    };
+                }
+                else
+                {
+                    result = EdmPrimitiveTypeKind.None;
+                }
+                return result;
+            }
+            
         }
     }
 

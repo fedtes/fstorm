@@ -6,74 +6,74 @@ namespace FStorm
 
     public class Row : IDictionary<EdmPath, object?>
     {
-        public Dictionary<EdmPath, object?> Cells { get; } = new Dictionary<EdmPath, object?>();
+        private Dictionary<EdmPath, object?> _cells { get; } = new Dictionary<EdmPath, object?>();
         
-        
+        public Dictionary<EdmPath, object?> Cells { get => this._cells.Where(x => !x.Key.IsPathToKey()).ToDictionary(x => x.Key,x => x.Value); }
         
         #region "IDictionary"
-        public object? this[EdmPath key] { get => ((IDictionary<EdmPath, object?>)Cells)[key]; set => ((IDictionary<EdmPath, object?>)Cells)[key] = value; }
+        public object? this[EdmPath key] { get => ((IDictionary<EdmPath, object?>)_cells)[key]; set => ((IDictionary<EdmPath, object?>)_cells)[key] = value; }
 
-        public ICollection<EdmPath> Keys => ((IDictionary<EdmPath, object?>)Cells).Keys;
+        public ICollection<EdmPath> Keys => ((IDictionary<EdmPath, object?>)_cells).Keys;
 
-        public ICollection<object?> Values => ((IDictionary<EdmPath, object?>)Cells).Values;
+        public ICollection<object?> Values => ((IDictionary<EdmPath, object?>)_cells).Values;
 
-        public int Count => ((ICollection<KeyValuePair<EdmPath, object?>>)Cells).Count;
+        public int Count => ((ICollection<KeyValuePair<EdmPath, object?>>)_cells).Count;
 
-        public bool IsReadOnly => ((ICollection<KeyValuePair<EdmPath, object?>>)Cells).IsReadOnly;
+        public bool IsReadOnly => ((ICollection<KeyValuePair<EdmPath, object?>>)_cells).IsReadOnly;
 
         public void Add(EdmPath key, object? value)
         {
-            ((IDictionary<EdmPath, object?>)Cells).Add(key, value);
+            ((IDictionary<EdmPath, object?>)_cells).Add(key, value);
         }
 
         public void Add(KeyValuePair<EdmPath, object?> item)
         {
-            ((ICollection<KeyValuePair<EdmPath, object?>>)Cells).Add(item);
+            ((ICollection<KeyValuePair<EdmPath, object?>>)_cells).Add(item);
         }
 
         public void Clear()
         {
-            ((ICollection<KeyValuePair<EdmPath, object?>>)Cells).Clear();
+            ((ICollection<KeyValuePair<EdmPath, object?>>)_cells).Clear();
         }
 
         public bool Contains(KeyValuePair<EdmPath, object?> item)
         {
-            return ((ICollection<KeyValuePair<EdmPath, object?>>)Cells).Contains(item);
+            return ((ICollection<KeyValuePair<EdmPath, object?>>)_cells).Contains(item);
         }
 
         public bool ContainsKey(EdmPath key)
         {
-            return ((IDictionary<EdmPath, object?>)Cells).ContainsKey(key);
+            return ((IDictionary<EdmPath, object?>)_cells).ContainsKey(key);
         }
 
         public void CopyTo(KeyValuePair<EdmPath, object?>[] array, int arrayIndex)
         {
-            ((ICollection<KeyValuePair<EdmPath, object?>>)Cells).CopyTo(array, arrayIndex);
+            ((ICollection<KeyValuePair<EdmPath, object?>>)_cells).CopyTo(array, arrayIndex);
         }
 
         public IEnumerator<KeyValuePair<EdmPath, object?>> GetEnumerator()
         {
-            return ((IEnumerable<KeyValuePair<EdmPath, object?>>)Cells).GetEnumerator();
+            return ((IEnumerable<KeyValuePair<EdmPath, object?>>)_cells).GetEnumerator();
         }
 
         public bool Remove(EdmPath key)
         {
-            return ((IDictionary<EdmPath, object?>)Cells).Remove(key);
+            return ((IDictionary<EdmPath, object?>)_cells).Remove(key);
         }
 
         public bool Remove(KeyValuePair<EdmPath, object?> item)
         {
-            return ((ICollection<KeyValuePair<EdmPath, object?>>)Cells).Remove(item);
+            return ((ICollection<KeyValuePair<EdmPath, object?>>)_cells).Remove(item);
         }
 
         public bool TryGetValue(EdmPath key, [MaybeNullWhen(false)] out object? value)
         {
-            return ((IDictionary<EdmPath, object?>)Cells).TryGetValue(key, out value);
+            return ((IDictionary<EdmPath, object?>)_cells).TryGetValue(key, out value);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return ((IEnumerable)Cells).GetEnumerator();
+            return ((IEnumerable)_cells).GetEnumerator();
         }
         #endregion
     }

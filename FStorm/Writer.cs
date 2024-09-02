@@ -77,6 +77,7 @@ namespace FStorm
                 foreach (var item in result.Value) {
                     ODataResource entity = new ODataResource();
                     entity.Properties= item
+                        .Cells
                         .Select(x => new ODataProperty() { Name = x.Key.Last().ToString(), Value = x.Value })
                         .ToList();
                     odataWriter.WriteStart(entity);
@@ -93,6 +94,7 @@ namespace FStorm
             if (result.Value != null)
             {
                 entity.Properties = result.Value.First()
+                    .Cells
                     .Select(x => new ODataProperty() { Name = x.Key.Last().ToString(), Value = x.Value })
                     .ToList();
             }

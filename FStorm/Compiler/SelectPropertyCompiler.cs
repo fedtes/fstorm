@@ -7,6 +7,8 @@
         /// </summary>
         public EdmPath? path;
         public EdmStructuralProperty? property;
+
+        public string overridedName = string.Empty;
     }
 
     public class SelectPropertyCompiler : Compiler<ReferenceToProperty>
@@ -21,7 +23,7 @@
                 // add missing join
             }
             var p = context.ContextData.property!;
-            context.Query.Select($"{context.ContextData.path!}." + p.columnName + $" as {context.ContextData.path! + p.Name}");
+            context.Query.Select($"{context.ContextData.path!}." + p.columnName + $" as {context.ContextData.path! + (!String.IsNullOrEmpty(context.ContextData.overridedName) ? context.ContextData.overridedName : p.Name)}");
             return context;
         }
     }
