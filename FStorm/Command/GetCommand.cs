@@ -79,19 +79,26 @@ namespace FStorm
                     cmd.Parameters.Add(p);
                 }
 
-                DataTable dt = new DataTable();
+                DataTable dt = new DataTable(compileResult.Context.Resource.ResourcePath);
 
                 using (var r = await cmd.ExecuteReaderAsync())
                 {
+                    int rowIdx = 0;
                     while (await r.ReadAsync())
                     {
-                        Row row = new Row();
+                        // Add Columns to data table
+                        if (0==rowIdx) {
+                            for (int i = 0; i < r.FieldCount; i++) {
+                                dt.AddColumn(pathFactory.Parse(r.GetName(i)));
+                            }
+                        }
+                        // Fill row values
+                        var row = dt.CreateRow();
                         for (int i = 0; i < r.FieldCount; i++)
                         {
                             var p = pathFactory.Parse(r.GetName(i));
-                            row.Add(p, r.IsDBNull(i) ? null : Helpers.TypeConverter(r.GetValue(i), p.GetTypeKind()));
+                            row[p] = r.IsDBNull(i) ? null : Helpers.TypeConverter(r.GetValue(i), p.GetTypeKind());
                         }
-                        dt.Add(row);
                     }
                 }
 

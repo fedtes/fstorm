@@ -28,64 +28,61 @@ public class TestResults
     [Test()]
     public void It_should_create_object_data(){
         EdmPathFactory factory = serviceProvider.GetService<EdmPathFactory>()!;
-        DataTable dt = new DataTable();
-        dt.Add(new Row() {
-            {factory.Parse("#/Customer/:key"), 1},
-            {factory.Parse("#/Customer/RagSoc"), "ACME"},
-            {factory.Parse("#/Customer/ID"), 1},
-            {factory.Parse("#/Customer/Orders/:key"), "O_1"},
-            {factory.Parse("#/Customer/Orders/OrderNumber"), "O_1"}
-        });
+        DataTable dt = new DataTable(factory.Parse("#/Customer"));
+        dt.AddColumn(factory.Parse("#/Customer/:key"));
+        dt.AddColumn(factory.Parse("#/Customer/RagSoc"));
+        dt.AddColumn(factory.Parse("#/Customer/ID"));
+        dt.AddColumn(factory.Parse("#/Customer/Orders/:key"));
+        dt.AddColumn(factory.Parse("#/Customer/Orders/OrderNumber"));
+        
+        var r = dt.CreateRow();
+        r[factory.Parse("#/Customer/:key")]=1;
+        r[factory.Parse("#/Customer/RagSoc")]="ACME";
+        r[factory.Parse("#/Customer/ID")]=1;
+        r[factory.Parse("#/Customer/Orders/:key")]="O_1";
+        r[factory.Parse("#/Customer/Orders/OrderNumber")]="O_1";
 
-        dt.Add(new Row() {
-            {factory.Parse("#/Customer/:key"), 1},
-            {factory.Parse("#/Customer/RagSoc"), "ACME"},
-            {factory.Parse("#/Customer/ID"), 1},
-            {factory.Parse("#/Customer/Orders/:key"), "O_2"},
-            {factory.Parse("#/Customer/Orders/OrderNumber"), "O_2"}
-        });
+        r = dt.CreateRow();
+        r[factory.Parse("#/Customer/:key")]=1;
+        r[factory.Parse("#/Customer/RagSoc")]="ACME";
+        r[factory.Parse("#/Customer/ID")]=1;
+        r[factory.Parse("#/Customer/Orders/:key")]="O_2";
+        r[factory.Parse("#/Customer/Orders/OrderNumber")]="O_2";
 
-        dt.Add(new Row() {
-            {factory.Parse("#/Customer/:key"), 1},
-            {factory.Parse("#/Customer/RagSoc"), "ACME"},
-            {factory.Parse("#/Customer/ID"), 1},
-            {factory.Parse("#/Customer/Orders/:key"), "O_3"},
-            {factory.Parse("#/Customer/Orders/OrderNumber"), "O_3"}
-        });
+        r = dt.CreateRow();
+        r[factory.Parse("#/Customer/:key")]=1;
+        r[factory.Parse("#/Customer/RagSoc")]="ACME";
+        r[factory.Parse("#/Customer/ID")]=1;
+        r[factory.Parse("#/Customer/Orders/:key")]="O_3";
+        r[factory.Parse("#/Customer/Orders/OrderNumber")]="O_3";
 
-        dt.Add(new Row() {
-            {factory.Parse("#/Customer/:key"), 2},
-            {factory.Parse("#/Customer/RagSoc"), "ECorp"},
-            {factory.Parse("#/Customer/ID"), 2},
-            {factory.Parse("#/Customer/Orders/:key"), "O_5"},
-            {factory.Parse("#/Customer/Orders/OrderNumber"), "O_5"}
-        });
+        r = dt.CreateRow();
+        r[factory.Parse("#/Customer/:key")]=2;
+        r[factory.Parse("#/Customer/RagSoc")]="ECorp";
+        r[factory.Parse("#/Customer/ID")]=2;
+        r[factory.Parse("#/Customer/Orders/:key")]="O_5";
+        r[factory.Parse("#/Customer/Orders/OrderNumber")]="O_5";
 
-        dt.Add(new Row() {
-            {factory.Parse("#/Customer/Orders/:key"), null},
-            {factory.Parse("#/Customer/:key"), 3},
-            {factory.Parse("#/Customer/RagSoc"), "DreamSolutions"},
-            {factory.Parse("#/Customer/ID"), 3},
-            {factory.Parse("#/Customer/Orders/OrderNumber"), null}
-        });
+        r = dt.CreateRow();
+        r[factory.Parse("#/Customer/Orders/:key")]=null;
+        r[factory.Parse("#/Customer/:key")]=3;
+        r[factory.Parse("#/Customer/RagSoc")]="DreamSolutions";
+        r[factory.Parse("#/Customer/ID")]=3;
+        r[factory.Parse("#/Customer/Orders/OrderNumber")]=null;
+    
+        r = dt.CreateRow();
+        r[factory.Parse("#/Customer/:key")]=1;
+        r[factory.Parse("#/Customer/RagSoc")]="ACME";
+        r[factory.Parse("#/Customer/Orders/:key")]="O_4";
+        r[factory.Parse("#/Customer/ID")]=1;
+        r[factory.Parse("#/Customer/Orders/OrderNumber")]="O_4";
 
+        var dos= dt.ToDataObjects();
 
-        dt.Add(new Row() {
-            {factory.Parse("#/Customer/:key"), 1},
-            {factory.Parse("#/Customer/RagSoc"), "ACME"},
-            {factory.Parse("#/Customer/Orders/:key"), "O_4"},
-            {factory.Parse("#/Customer/ID"), 1},
-            {factory.Parse("#/Customer/Orders/OrderNumber"), "O_4"}
-        });
-
-
-        var ranges= dt.GetHRanges();
-
-        DataObjects @do= new DataObjects(dt);
-        Assert.That(@do.Count(), Is.EqualTo(3));
-        Assert.That((@do.First()["Orders"] as DataObjects).Count, Is.EqualTo(4));
-        Assert.That(@do.First()["RagSoc"], Is.EqualTo("ACME"));
-
-        //Assert.AreEqual(2, ranges.Count());
+        Assert.That(dos.Count, Is.EqualTo(3));
+        Assert.That(dos.First()["ID"], Is.EqualTo(1));
+        Assert.That((dos.First()["Orders"] as DataObjects)!.Count, Is.EqualTo(4));
+        Assert.That((dos.First()["Orders"] as DataObjects)!.Last()["OrderNumber"], Is.EqualTo("O_4"));
+        Assert.That((dos.First(x=> x["RagSoc"]=="DreamSolutions")["Orders"] as DataObjects)!.Count, Is.EqualTo(0));
     }
 }

@@ -40,6 +40,7 @@ namespace FStorm
             _segments = segments.ToList();
         }
 
+#region "Operators"
         public static EdmPath operator +(EdmPath x, EdmSegment y)
         {
             var x1 = x.Clone();
@@ -60,10 +61,9 @@ namespace FStorm
         public static bool operator ==(EdmPath x, EdmPath y) => x.ToString().Equals(y.ToString());
 
         public static bool operator !=(EdmPath x, EdmPath y) => !(x==y);
-
-        public abstract EdmPath Clone();
-
-        public override string ToString() => String.Join("/", _segments.Select(x => x.ToString()));
+#endregion
+        
+#region "IEnumerable"
 
         public IEnumerator<EdmSegment> GetEnumerator()
         {
@@ -75,13 +75,17 @@ namespace FStorm
             return _segments.GetEnumerator();
         }
 
+#endregion
+        
+#region "Equals"
         public override bool Equals(object? obj) => obj != null && GetType() == obj.GetType() && ToString().Equals(obj.ToString());
 
         public override int GetHashCode() => ToString().GetHashCode();
-
+#endregion
         public abstract EdmPrimitiveTypeKind GetTypeKind();
-
         public abstract bool IsPathToKey();
+        public abstract EdmPath Clone();
+        public override string ToString() => String.Join("/", _segments.Select(x => x.ToString()));
     }
 
     public class EdmResourcePath : EdmPath

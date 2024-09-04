@@ -78,5 +78,25 @@ namespace FStorm.Test
             Assert.Throws<ArgumentException>(() => factory.CreateResourcePath("Cus/tomers"));
         }
 
+
+        [Test]
+        public void It_should_sort_datatable_columns()
+        {
+            EdmPathFactory factory = serviceProvider.GetService<EdmPathFactory>()!;
+            DataTable dt = new DataTable(factory.Parse("#/Customer"));
+            dt.AddColumn(factory.Parse("#/Customer/:key"));
+            dt.AddColumn(factory.Parse("#/Customer/Orders/OrderNumber"));
+            dt.AddColumn(factory.Parse("#/Customer/ID"));
+            dt.AddColumn(factory.Parse("#/Customer/Orders/:key"));
+            dt.AddColumn(factory.Parse("#/Customer/RagSoc"));
+
+            var s = dt.SortedColumns();
+            Assert.That(s[0].ToString(), Is.EqualTo("#/Customer/:key"));
+            Assert.That(s[1].ToString(), Is.EqualTo("#/Customer/ID"));
+            Assert.That(s[2].ToString(), Is.EqualTo("#/Customer/RagSoc"));
+            Assert.That(s[3].ToString(), Is.EqualTo("#/Customer/Orders/:key"));
+            Assert.That(s[4].ToString(), Is.EqualTo("#/Customer/Orders/OrderNumber"));
+        }
+
     }
 }

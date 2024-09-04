@@ -72,37 +72,34 @@ namespace FStorm
         {
             ODataResourceSet set = new ODataResourceSet();
             odataWriter.WriteStart(set);
-            if (result.Value != null)
-            {
-                foreach (var item in result.Value) {
-                    ODataResource entity = new ODataResource();
-                    entity.Properties= item
-                        .Cells
-                        .Select(x => new ODataProperty() { Name = x.Key.Last().ToString(), Value = x.Value })
-                        .ToList();
-                    odataWriter.WriteStart(entity);
-                    odataWriter.WriteEnd();
-                }
-
-            }
+            WriteObject(odataWriter, result);
             odataWriter.WriteEnd();
         }
 
         protected void WriteObject(ODataWriter odataWriter, CommandResult<CompilerContext<GetRequest>> result) 
         {
-            ODataResource entity = new ODataResource();
             if (result.Value != null)
             {
-                entity.Properties = result.Value.First()
-                    .Cells
-                    .Select(x => new ODataProperty() { Name = x.Key.Last().ToString(), Value = x.Value })
-                    .ToList();
+                foreach (var item in result.Value.ToDataObjects()) {
+                    ODataResource entity = new ODataResource();
+                    List<ODataProperty> entityProperties = new List<ODataProperty>();
+                    foreach (var prop in item)
+                    {
+                        if (prop.Value != null && prop.Value.GetType() == typeof(DataObjects))
+                        {
+
+                        }
+                        else
+                        {
+                            entityProperties.Add(new ODataProperty() { Name = prop.Key, Value = prop.Value });
+                        }
+                    }
+
+                    entity.Properties= entityProperties;
+                    odataWriter.WriteStart(entity);
+                    odataWriter.WriteEnd();
+                }
             }
-            else { 
-                entity.Properties = new List<ODataProperty>();
-            }
-            odataWriter.WriteStart(entity);
-            odataWriter.WriteEnd();
         }
     }
 }

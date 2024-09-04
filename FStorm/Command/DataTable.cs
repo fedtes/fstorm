@@ -80,94 +80,126 @@ namespace FStorm
         #endregion
     }
 
-
-    public class HRange
-    {
-        public HRange(EdmPath EntityPath, List<VRange> VRanges) {
-            this.EntityPath = EntityPath;
-            this.VRanges = VRanges;
-        }
-        public List<VRange> VRanges;
-
-        public EdmPath EntityPath;
-
-        public override string ToString()
-        {
-            return $"{EntityPath.ToString()}[{VRanges.Count()}]";
-        }
-    }
-
-    public class VRange
-    {
-        /// <summary>
-        /// Zero based
-        /// </summary>
-        public List<int> RowIndexes;
-
-        public List<EdmPath> Columns;
-
-        public EdmPath Key;
-
-        public object KeyValue;
-
-        public override string ToString()
-        {
-            return $"{Key.ToString()} [{RowIndexes.Count()}; {Columns.Count()}]";
-        }
-    }
-
     public class DataTable: IList<Row>
     {
+        private List<EdmPath> _Columns = new List<EdmPath>();
+
+        private readonly EdmPath root;
+
         public Row this[int index] { get => ((IList<Row>)Rows)[index]; set => ((IList<Row>)Rows)[index] = value; }
 
         public List<Row> Rows { get; } = new List<Row>();
 
-        public List<HRange> GetHRanges() {
-            List<HRange> result = new List<HRange>();
+        public DataTable(EdmPath root){
+            this.root = root;
+        }
 
-            var colGroups = Columns
-                .Where(x => x.GetType() == typeof(EdmResourcePath))
-                .GroupBy(x => x - 1)
-                .OrderBy(x => x.Key.Count()).ToList();
+        /// <summary>
+        /// List all columns in the data table. TODO avoid null exception in DataTable is empty.
+        /// </summary>
+        public List<EdmPath> Columns {get => _Columns;}
 
-            foreach (var colGroup in colGroups)
+        public void AddColumn(EdmPath col) {
+            if (!_Columns.Any(x => x == col)) {
+                _Columns.Add(col);
+            }
+        }
+
+        public Row CreateRow() {
+            var r = new Row();
+            _Columns.ForEach(x => r.Add(x,null));
+            this.Add(r);
+            return r;
+        }
+
+        public List<EdmPath> SortedColumns() {
+            List<EdmPath> c = new List<EdmPath>();
+            _Columns.Where(x => typeof(EdmResourcePath)==x.GetType()).ToList().ForEach(x => c.Add(x));
+            _Columns.Where(x => typeof(EdmResourcePath)!=x.GetType()).ToList().ForEach(x => c.Add(x));
+
+            bool LeftIsGreaterToRight (EdmPath l, EdmPath r) {
+                if (typeof(EdmResourcePath)==r.GetType() && typeof(EdmResourcePath)!=l.GetType()) return false;
+                if (typeof(EdmResourcePath)!=r.GetType() && typeof(EdmResourcePath)==l.GetType()) return true;
+                if (l.Count() > r.Count()) return true;
+                if (l.Count() < r.Count()) return false;
+                if (l.IsPathToKey() && !r.IsPathToKey()) return false;
+                if (!l.IsPathToKey() && r.IsPathToKey()) return true;
+                return false;
+            };
+
+            //bubble sort. can be upgraded
+            for (int i = 0; i < c.Count; i++)
             {
-
-                List<VRange> groups = new List<VRange>();
-                var _cols = colGroup.ToList();
-                var _key = colGroup.ToList().First(x=> x.IsPathToKey());
-                var _keyValues = this.Where(x=> x.ContainsKey(_key)).Select(x => x[_key]).Distinct();
-
-                foreach (var kv in _keyValues)
+                for (int j = 0; j < c.Count - i - 1; j++)
                 {
-                    if (kv is null ) continue;
-                    List<int> _rowIdx = new List<int>();
-                    foreach (var r in this)
-                    {
-                        if (r[_key] != null && r[_key]!.Equals(kv)) _rowIdx.Add(this.IndexOf(r));
+                    if (LeftIsGreaterToRight(c[j], c[j+1])) {
+                        var temp = c[j];
+                        c[j] = c[j+1];
+                        c[j+1] = temp;
                     }
-                    VRange group = new VRange() {
-                        Columns = _cols,
-                        Key = _key,
-                        KeyValue = kv,
-                        RowIndexes = _rowIdx
-                    };
+                }
+            }
+            return c;
+        }
 
-                    groups.Add(group);
+
+        public DataObjects ToDataObjects(DataTableIterator? iterator = null, int depth = 0) {
+            var _iterator = iterator?? new DataTableIterator(this);
+            var result = new DataObjects();
+            DataObject? current = null;
+            bool pk_found = false;
+
+            do {
+
+                if (!pk_found && _iterator.Value.Key.IsPathToKey()) 
+                {
+                    if (_iterator.Value.Value != null)
+                    {
+                        if (!result.Any(x=> x.primaryKey.Equals(_iterator.Value.Value))) 
+                        {
+                            result.Add(new DataObject() {primaryKey = _iterator.Value.Value});
+                        }
+                        current = result.First(x=> x.primaryKey.Equals(_iterator.Value.Value));
+                        pk_found = true;
+                    }
+                } 
+                else 
+                {
+
+                    if (_iterator.PreValue != null && _iterator.Value.Key.Count() > _iterator.PreValue.Value.Key.Count()) 
+                    {
+                        if (current != null && !current.ContainsKey((_iterator.Value.Key - 1).Last().Identifier)) 
+                        {
+                            current.Add((_iterator.Value.Key - 1).Last().Identifier, ToDataObjects(_iterator, depth + 1));
+                        } 
+                        else if (current != null && current.ContainsKey((_iterator.Value.Key - 1).Last().Identifier)) {
+                            current[(_iterator.Value.Key - 1).Last().Identifier] = (current[(_iterator.Value.Key - 1).Last().Identifier] as DataObjects)!.Concat(ToDataObjects(_iterator,depth + 1));
+                        }
+                    } 
+                    else if (_iterator.PreValue != null && (_iterator.Value.Key-1) != (_iterator.PreValue.Value.Key-1)) 
+                    {
+                        return result;
+                    } 
+                    else 
+                    {
+                        if (current != null && !current.ContainsKey(_iterator.Value.Key.Last().Identifier)) 
+                        {
+                            current.Add(_iterator.Value.Key.Last().Identifier, _iterator.Value.Value);
+                        }
+                    }
                 }
 
-                result.Add(new HRange(colGroup.Key, groups));
-            }
+                if (_iterator.IsLastCellRow()) 
+                {
+                    if (depth > 0) return result;
+                    pk_found = false;
+                } 
+            } while (_iterator.Next());
 
             return result;
         }
 
 
-        /// <summary>
-        /// List all columns in the data table. TODO avoid null exception in DataTable is empty.
-        /// </summary>
-        public List<EdmPath> Columns {get => this.First().Keys.ToList() ;}
-        
         #region "IList"
         public int Count => ((ICollection<Row>)Rows).Count;
 
@@ -225,66 +257,54 @@ namespace FStorm
         #endregion
     }
 
+    public class DataTableIterator
+    {
+        private readonly DataTable data;
+        private int row = 0;
+        private int col = 0;
+
+        private List<EdmPath> cols;
+
+        internal DataTableIterator(DataTable data)
+        {
+            this.data = data;
+            cols = data.SortedColumns();
+        }
+
+        internal int Col {get => col;}
+        internal int Row {get => row;}
+
+        KeyValuePair<EdmPath, object?>? preValue;
+        internal KeyValuePair<EdmPath, object?> Value {get => new KeyValuePair<EdmPath, object?>(cols[col], data[row][cols[col]]); }
+        internal KeyValuePair<EdmPath, object?>? PreValue {get => preValue; }
+
+        internal bool IsLastCellRow() => col == cols.Count - 1;
+
+        internal bool Next() {
+            preValue = Value;
+            col++;
+            if (col >= cols.Count){
+                col=0;
+                row++;
+            }
+            return row < data.Count;
+        }
+    }
 
 
     public class DataObjects : IList<DataObject>
     {
         private List<DataObject> objs = new List<DataObject>();
 
-        public DataObjects(){}
-
-        public DataObjects(DataTable source)
-        {
-           var ranges = source.GetHRanges(); 
-            ProcessRange(source, ranges);
+        public DataObjects Concat(DataObjects values) {
+            objs = objs.Concat(values.objs).ToList();
+            return this;
         }
 
         public override string ToString()
         {
             return $"Count({objs.Count})";
         }
-
-        private void ProcessRange(DataTable source, List<HRange> ranges) 
-        {
-            
-            foreach (var vr in ranges.First().VRanges)
-            {
-                var _do = new DataObject();
-                foreach (var col in vr.Columns)
-                {
-                    _do.Add(col.Last().Identifier, source[vr.RowIndexes.First()][col]);
-                }
-                ProcessRange(source, ranges.Skip(1).ToList(), _do, vr);
-                this.Add(_do);
-            } 
-        }
-
-        private void ProcessRange(DataTable source, List<HRange> ranges, DataObject @do, VRange vrange) 
-        {
-            DataObjects enumProp = new DataObjects();
-            HRange current = ranges.First();
-            foreach (var g in ranges.First().VRanges.Where(x => x.RowIndexes.Intersect(vrange.RowIndexes).Any()))
-            {
-                var _do = new DataObject();
-                foreach (var col in g.Columns)
-                {
-                    _do.Add(col.Last().Identifier, source[g.RowIndexes.First()][col]);
-                }
-                enumProp.Add(_do);
-
-                if (ranges.Count() > 1) {
-                    // go nested
-                    int idx =1;
-                    while (ranges.Count() > idx && ranges.Skip(1).First().EntityPath.Count() == current.EntityPath.Count())
-                    {
-                        idx++;
-                    }
-                    if (ranges.Count() > idx) ProcessRange(source, ranges.Skip(1).ToList(), _do, g);
-                }
-            }
-            @do.Add(ranges.First().EntityPath.Last().Identifier, enumProp);
-        }
-
 
         #region "IList"
         public DataObject this[int index] { get => ((IList<DataObject>)objs)[index]; set => ((IList<DataObject>)objs)[index] = value; }
@@ -348,105 +368,82 @@ namespace FStorm
 
     public class DataObject : IDictionary<string, object?>
     {
-        private Dictionary<string, object?> properties = new Dictionary<string, object?>();
+        internal Dictionary<string, object?> Properties = new Dictionary<string, object?>();
 
-        public DataObject() {}
+        internal object primaryKey = null!;
 
-        public DataObject(DataTable source, int rowIndex)
-        {
-
-            var colGroups = source.Columns
-                .Where(x => x.GetType()==typeof(EdmResourcePath))
-                .GroupBy(x=> x - 1)
-                .OrderBy(x => x.Key.Count()).ToList();
-
-            var minLen = colGroups.Select(x=> x.Key.Count()).Min();
-
-            ConvertDataTable(source, rowIndex, null, colGroups);
-        }
-
-        private void ConvertDataTable(DataTable source, int rowIndex, EdmPath? Key, List<IGrouping<EdmPath, EdmPath>> colGroups)
-        {
-            foreach (var item in colGroups.First())
-            {
-                // convert to properties
-                var propName = item.Last().Identifier;
-                var propValue = source[rowIndex][item];
-                properties.Add(propName, propValue);
-            }
-        }
+        internal DataObject() {}
 
         public override string ToString()
         {
-            var k = properties[":key"];
-            return $":key{k} properties({properties.Count})";
+            return $":key {primaryKey} properties({Properties.Count})";
         }
 
         #region "IDictionary"
 
-        public object? this[string key] { get => ((IDictionary<string, object?>)properties)[key]; set => ((IDictionary<string, object?>)properties)[key] = value; }
+        public object? this[string key] { get => ((IDictionary<string, object?>)Properties)[key]; set => ((IDictionary<string, object?>)Properties)[key] = value; }
 
-        public ICollection<string> Keys => ((IDictionary<string, object?>)properties).Keys;
+        public ICollection<string> Keys => ((IDictionary<string, object?>)Properties).Keys;
 
-        public ICollection<object?> Values => ((IDictionary<string, object?>)properties).Values;
+        public ICollection<object?> Values => ((IDictionary<string, object?>)Properties).Values;
 
-        public int Count => ((ICollection<KeyValuePair<string, object?>>)properties).Count;
+        public int Count => ((ICollection<KeyValuePair<string, object?>>)Properties).Count;
 
-        public bool IsReadOnly => ((ICollection<KeyValuePair<string, object?>>)properties).IsReadOnly;
+        public bool IsReadOnly => ((ICollection<KeyValuePair<string, object?>>)Properties).IsReadOnly;
 
         public void Add(string key, object? value)
         {
-            ((IDictionary<string, object?>)properties).Add(key, value);
+            ((IDictionary<string, object?>)Properties).Add(key, value);
         }
 
         public void Add(KeyValuePair<string, object?> item)
         {
-            ((ICollection<KeyValuePair<string, object?>>)properties).Add(item);
+            ((ICollection<KeyValuePair<string, object?>>)Properties).Add(item);
         }
 
         public void Clear()
         {
-            ((ICollection<KeyValuePair<string, object?>>)properties).Clear();
+            ((ICollection<KeyValuePair<string, object?>>)Properties).Clear();
         }
 
         public bool Contains(KeyValuePair<string, object?> item)
         {
-            return ((ICollection<KeyValuePair<string, object?>>)properties).Contains(item);
+            return ((ICollection<KeyValuePair<string, object?>>)Properties).Contains(item);
         }
 
         public bool ContainsKey(string key)
         {
-            return ((IDictionary<string, object?>)properties).ContainsKey(key);
+            return ((IDictionary<string, object?>)Properties).ContainsKey(key);
         }
 
         public void CopyTo(KeyValuePair<string, object?>[] array, int arrayIndex)
         {
-            ((ICollection<KeyValuePair<string, object?>>)properties).CopyTo(array, arrayIndex);
+            ((ICollection<KeyValuePair<string, object?>>)Properties).CopyTo(array, arrayIndex);
         }
 
         public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
         {
-            return ((IEnumerable<KeyValuePair<string, object?>>)properties).GetEnumerator();
+            return ((IEnumerable<KeyValuePair<string, object?>>)Properties).GetEnumerator();
         }
 
         public bool Remove(string key)
         {
-            return ((IDictionary<string, object?>)properties).Remove(key);
+            return ((IDictionary<string, object?>)Properties).Remove(key);
         }
 
         public bool Remove(KeyValuePair<string, object?> item)
         {
-            return ((ICollection<KeyValuePair<string, object?>>)properties).Remove(item);
+            return ((ICollection<KeyValuePair<string, object?>>)Properties).Remove(item);
         }
 
         public bool TryGetValue(string key, [MaybeNullWhen(false)] out object? value)
         {
-            return ((IDictionary<string, object?>)properties).TryGetValue(key, out value);
+            return ((IDictionary<string, object?>)Properties).TryGetValue(key, out value);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return ((IEnumerable)properties).GetEnumerator();
+            return ((IEnumerable)Properties).GetEnumerator();
         }
 #endregion
 
