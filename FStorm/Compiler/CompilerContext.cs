@@ -3,7 +3,7 @@
 namespace FStorm
 {
 
-    public enum ResourceType
+    public enum OutputType
     {
         Collection,
         Object,
@@ -20,7 +20,7 @@ namespace FStorm
         /// </summary>
         public class ResourceMetadata
         {
-            public ResourceType ResourceType;
+            public OutputType OutputType;
             public EdmPath ResourcePath = null!;
             public EdmEntityType? ResourceEdmType;
             public ODataPath ODataPath = null!;
@@ -58,7 +58,7 @@ namespace FStorm
         {
             newContext.Query = this.Query;
             newContext.Aliases = this.Aliases;
-            newContext.Resource.ResourceType = this.Resource.ResourceType;
+            newContext.Resource.OutputType = this.Resource.OutputType;
             newContext.Resource.ResourcePath = this.Resource.ResourcePath;
             newContext.Resource.ResourceEdmType = this.Resource.ResourceEdmType;
             return newContext;

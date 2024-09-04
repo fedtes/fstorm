@@ -48,15 +48,7 @@ namespace FStorm
             context.Resource.ODataPath = parser.ParsePath();
             context = compiler.Compile(context);
 
-            if (context.Resource.ResourceType == ResourceType.Object || context.Resource.ResourceType == ResourceType.Collection)
-            {
-                foreach (EdmStructuralProperty p in (context.Resource.ResourceEdmType.AsElementType() as EdmEntityType)!.StructuralProperties().Cast<EdmStructuralProperty>())
-                {
-                    selectPropertyCompiler
-                        .Compile(context.CloneTo(new ReferenceToProperty() { property = p, path = context.Resource.ResourcePath }))
-                        .CopyTo(context);
-                }
-            }
+            
 
             return Compile(context);
         }

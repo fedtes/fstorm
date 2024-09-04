@@ -28,15 +28,15 @@ namespace FStorm
                 if (!context.ContextData.IsJoin)
                 {
                     context.Query.From(context.ContextData.Type!.Table + $" as {context.ContextData.Alias.ToString()}");
-                    ReferenceToProperty property = new ReferenceToProperty()
-                    {
-                        path= context.ContextData.Alias,
-                        overridedName=":key",
-                        property = (EdmStructuralProperty)context.ContextData.Type.Key().First()
-                    };
+                    // ReferenceToProperty property = new ReferenceToProperty()
+                    // {
+                    //     path= context.ContextData.Alias,
+                    //     overridedName=":key",
+                    //     property = (EdmStructuralProperty)context.ContextData.Type.Key().First()
+                    // };
 
-                    select.Compile(context.CloneTo(property))
-                        .CopyTo(context);
+                    // select.Compile(context.CloneTo(property))
+                    //     .CopyTo(context);
                 }
                 else
                 {
@@ -45,15 +45,15 @@ namespace FStorm
                     var sourceProperty = (EdmStructuralProperty)constraint.PrincipalProperty;
                     var targetProperty = (EdmStructuralProperty)constraint.DependentProperty;
                     context.Query.Join(type.Table + $" as {context.Resource.ResourcePath}", $"{context.Resource.ResourcePath - 1}.{sourceProperty.columnName}", $"{context.Resource.ResourcePath}.{targetProperty.columnName}");
-                    ReferenceToProperty property = new ReferenceToProperty()
-                    {
-                        path= context.ContextData.Alias,
-                        overridedName=":key",
-                        property = (EdmStructuralProperty)type.Key().First()
-                    };
+                    // ReferenceToProperty property = new ReferenceToProperty()
+                    // {
+                    //     path= context.ContextData.Alias,
+                    //     overridedName=":key",
+                    //     property = (EdmStructuralProperty)type.Key().First()
+                    // };
 
-                    select.Compile(context.CloneTo(property))
-                        .CopyTo(context);
+                    // select.Compile(context.CloneTo(property))
+                    //     .CopyTo(context);
                 }
 
                 

@@ -53,13 +53,13 @@ namespace FStorm
             IEdmEntitySet entitySet = service.Model.EntityContainer.EntitySets().
                 Where(x => x.EntityType == result.Context.Resource.ResourceEdmType).First();
 
-            switch (result.Context.Resource.ResourceType)
+            switch (result.Context.Resource.OutputType)
             {
-                case ResourceType.Collection:
+                case OutputType.Collection:
                     WriteCollection(writer.CreateODataResourceSetWriter(entitySet), result);
                     break;
-                case ResourceType.Object:
-                case ResourceType.Property:
+                case OutputType.Object:
+                case OutputType.Property:
                     WriteObject(writer.CreateODataResourceWriter(entitySet), result);
                     break;
                 default:

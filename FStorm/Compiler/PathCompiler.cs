@@ -43,7 +43,7 @@ namespace FStorm
                             fromCompiler
                                 .Compile(context.CloneTo(_edmType)!)
                                 .CopyTo(context);
-                            context.Resource.ResourceType= ResourceType.Collection;
+                            context.Resource.OutputType= OutputType.Collection;
                             context.Resource.ResourceEdmType = _edmType;
                             break;
                         }
@@ -54,7 +54,7 @@ namespace FStorm
                             binaryFilterCompiler
                                 .Compile(context.CloneTo(new BinaryFilter() { path = context.Resource.ResourcePath, property = keyProperty, value = key.Value }))
                                 .CopyTo(context);
-                            context.Resource.ResourceType = ResourceType.Object;
+                            context.Resource.OutputType = OutputType.Object;
                             break;
                         }
                     case PropertySegment property:
@@ -62,7 +62,7 @@ namespace FStorm
                             selectPropertyCompiler
                                 .Compile(context.CloneTo(new ReferenceToProperty() { path = context.Resource.ResourcePath, property = (EdmStructuralProperty)property.Property }))
                                 .CopyTo(context);
-                            context.Resource.ResourceType = ResourceType.Property;
+                            context.Resource.OutputType = OutputType.Property;
                             break;
                         }
                     case NavigationPropertySegment navigationProperty when navigationProperty.EdmType.TypeKind == EdmTypeKind.Collection:
@@ -73,7 +73,7 @@ namespace FStorm
 
                             var _edmType = (navigationProperty.NavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!;
                             context.Resource.ResourceEdmType = _edmType;
-                            context.Resource.ResourceType = ResourceType.Collection;
+                            context.Resource.OutputType = OutputType.Collection;
                             break;
                         }
                     case NavigationPropertySegment navigationProperty when navigationProperty.EdmType.TypeKind == EdmTypeKind.Entity:
@@ -83,7 +83,7 @@ namespace FStorm
                                 .CopyTo(context);
 
                             var _edmType = (navigationProperty.NavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!;
-                            context.Resource.ResourceType = ResourceType.Object;
+                            context.Resource.OutputType = OutputType.Object;
                             context.Resource.ResourceEdmType = _edmType;
                             break;
                         }
@@ -93,7 +93,7 @@ namespace FStorm
                 isRoot = false;
             }
 
-            if (context.Resource.ResourceType != ResourceType.Property)
+            if (context.Resource.OutputType != OutputType.Property)
                 context.Resource.ResourceEdmType=(EdmEntityType)context.ContextData.LastSegment.EdmType.AsElementType();
             
             return context;
