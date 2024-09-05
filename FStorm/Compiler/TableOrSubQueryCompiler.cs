@@ -12,52 +12,26 @@ namespace FStorm
         public bool IsJoin=false;
     }
 
-    public class TableOrSubQueryCompiler : Compiler<TableOrQuery>
+    public class TableOrSubQueryCompiler
     {
-        private readonly SelectPropertyCompiler select;
-
-        public TableOrSubQueryCompiler(FStormService fStormService, SelectPropertyCompiler select) : base(fStormService)
+        public CompilerContext Compile(CompilerContext context, TableOrQuery tableOrQuery)
         {
-            this.select = select;
-        }
-
-        public override CompilerContext<TableOrQuery> Compile(CompilerContext<TableOrQuery> context)
-        {
-            if (context.ContextData.IsTable)
+            if (tableOrQuery.IsTable)
             {
-                if (!context.ContextData.IsJoin)
+                if (!tableOrQuery.IsJoin)
                 {
-                    context.Query.From(context.ContextData.Type!.Table + $" as {context.ContextData.Alias.ToString()}");
-                    // ReferenceToProperty property = new ReferenceToProperty()
-                    // {
-                    //     path= context.ContextData.Alias,
-                    //     overridedName=":key",
-                    //     property = (EdmStructuralProperty)context.ContextData.Type.Key().First()
-                    // };
-
-                    // select.Compile(context.CloneTo(property))
-                    //     .CopyTo(context);
+                    context.Query.From(tableOrQuery.Type!.Table + $" as {tableOrQuery.Alias.ToString()}");
                 }
                 else
                 {
-                    var type = (context.ContextData.NavProperty!.Type.Definition.AsElementType() as EdmEntityType)!;
-                    var constraint = context.ContextData.NavProperty.ReferentialConstraint.PropertyPairs.First();
+                    var type = (tableOrQuery.NavProperty!.Type.Definition.AsElementType() as EdmEntityType)!;
+                    var constraint = tableOrQuery.NavProperty.ReferentialConstraint.PropertyPairs.First();
                     var sourceProperty = (EdmStructuralProperty)constraint.PrincipalProperty;
                     var targetProperty = (EdmStructuralProperty)constraint.DependentProperty;
                     context.Query.Join(type.Table + $" as {context.Resource.ResourcePath}", $"{context.Resource.ResourcePath - 1}.{sourceProperty.columnName}", $"{context.Resource.ResourcePath}.{targetProperty.columnName}");
-                    // ReferenceToProperty property = new ReferenceToProperty()
-                    // {
-                    //     path= context.ContextData.Alias,
-                    //     overridedName=":key",
-                    //     property = (EdmStructuralProperty)type.Key().First()
-                    // };
-
-                    // select.Compile(context.CloneTo(property))
-                    //     .CopyTo(context);
                 }
-
-                
-            } else
+            } 
+            else
             { 
                 throw new NotImplementedException();
             }

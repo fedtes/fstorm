@@ -22,9 +22,9 @@ namespace FStorm
 
         public abstract SQLCompiledQuery ToSQL();
 
-        protected virtual SQLCompiledQuery Compile(CompilerContext<GetRequest> context) 
+        protected virtual SQLCompiledQuery Compile(CompilerContext context) 
         {
-            Compiler compiler = fsService.options.SQLCompilerType switch
+            SqlKata.Compilers.Compiler compiler = fsService.options.SQLCompilerType switch
             {
                 SQLCompilerType.MSSQL => new SqlServerCompiler(),
                 SQLCompilerType.SQLLite => new SqliteCompiler(),
@@ -38,10 +38,10 @@ namespace FStorm
 
     public class SQLCompiledQuery
     {
-        public CompilerContext<GetRequest> Context { get; }
+        public CompilerContext Context { get; }
         public string Statement { get; }
         public Dictionary<string, object> Bindings { get; }
-        public SQLCompiledQuery(CompilerContext<GetRequest> context, string statement, Dictionary<string, object> bindings)
+        public SQLCompiledQuery(CompilerContext context, string statement, Dictionary<string, object> bindings)
         {
             Context = context;
             Statement = statement;

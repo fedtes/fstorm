@@ -98,9 +98,9 @@ namespace FStorm
             }
         }
 
-        public GetCommand Get(GetRequest configuration)
+        public GetRequestCommand Get(GetRequest configuration)
         {
-            var cmd = serviceProvider.GetService<GetCommand>()!;
+            var cmd = serviceProvider.GetService<GetRequestCommand>()!;
             cmd.Configuration = configuration;
             cmd.connection= this;
             cmd.transaction= transaction ?? BeginTransaction();

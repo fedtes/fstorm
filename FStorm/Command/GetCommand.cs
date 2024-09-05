@@ -21,21 +21,18 @@ namespace FStorm
         }
     }
 
-    public class GetCommand : Command
+    public class GetRequestCommand : Command
     {
-        private readonly GetCompiler compiler;
-        private readonly SelectPropertyCompiler selectPropertyCompiler;
+        private readonly Compiler compiler;
         private readonly EdmPathFactory pathFactory;
 
-        public GetCommand(
+        public GetRequestCommand(
             IServiceProvider serviceProvider,
             FStormService fStormService,
-            GetCompiler compiler,
-            SelectPropertyCompiler selectPropertyCompiler,
+            Compiler compiler,
             EdmPathFactory pathFactory) : base(serviceProvider, fStormService)
         {
             this.compiler = compiler;
-            this.selectPropertyCompiler = selectPropertyCompiler;
             this.pathFactory = pathFactory;
         }
 
@@ -43,25 +40,22 @@ namespace FStorm
 
         public override SQLCompiledQuery ToSQL()
         {
-            var context = new CompilerContext<GetRequest>() { ContextData = Configuration };
+            var context = new CompilerContext();
             ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.ResourcePath, UriKind.Relative));
             context.Resource.ODataPath = parser.ParsePath();
-            context = compiler.Compile(context);
-
-            
-
+            context = compiler.AddGet(context, Configuration);
             return Compile(context);
         }
 
 
-        public async Task<CommandResult<CompilerContext<GetRequest>>> ToListAsync()
+        public async Task<CommandResult<CompilerContext>> ToListAsync()
         {
             if (connection == null || this.transaction == null)
             {
                 throw new ArgumentNullException("Either connection or transaction are null. Cannot execute query.");
             }
 
-            var _result = new CommandResult<CompilerContext<GetRequest>>();
+            var _result = new CommandResult<CompilerContext>();
             var con = base.connection.connection;
 
             try

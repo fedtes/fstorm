@@ -1,29 +1,15 @@
 ﻿namespace FStorm
 {
-    public class ReferenceToProperty
+    public class SelectPropertyCompiler
     {
-        /// <summary>
-        /// Path to the entity containing this property (property segment is excluded)
-        /// </summary>
-        public EdmPath? path;
-        public EdmStructuralProperty? property;
-
-        public string overridedName = string.Empty;
-    }
-
-    public class SelectPropertyCompiler : Compiler<ReferenceToProperty>
-    {
-        public SelectPropertyCompiler(FStormService fStormService) : base(fStormService) { }
-
-        public override CompilerContext<ReferenceToProperty> Compile(CompilerContext<ReferenceToProperty> context)
+       
+        public CompilerContext Compile(CompilerContext context, EdmPath path, EdmStructuralProperty property, string overridedName = "")
         {
-
-            if (!context.Aliases.Contains(context.ContextData.path!))
+            if (!context.Aliases.Contains(path))
             {
                 // add missing join
             }
-            var p = context.ContextData.property!;
-            context.Query.Select($"{context.ContextData.path!}." + p.columnName + $" as {context.ContextData.path! + (!String.IsNullOrEmpty(context.ContextData.overridedName) ? context.ContextData.overridedName : p.Name)}");
+            context.Query.Select($"{path!}." + property.columnName + $" as {path! + (!String.IsNullOrEmpty(overridedName) ? overridedName : property.Name)}");
             return context;
         }
     }

@@ -101,7 +101,7 @@ namespace FStorm
 
         public override bool IsPathToKey() => _segments.Last().Identifier == ":key";
 
-        private EdmEntityType? GetContainerType()
+        private EdmEntityType GetContainerType()
         {
             EdmEntityType? entityType = null;
             for (int i = 0; i < this.Count()-1; i++)
@@ -117,13 +117,16 @@ namespace FStorm
                     entityType = (EdmEntityType?)navProp.Type.ToStructuredType()!;
                 }
             }
-            return entityType;
+            if (entityType == null)
+                throw new InvalidOperationException($"Path {this.ToString()} do not refers to any valid EntityType.");
+            else
+                return entityType;
         }
 
         public override EdmPrimitiveTypeKind GetTypeKind()
         {
             if (IsPathToKey()) {
-                var entityType = GetContainerType();
+                EdmEntityType entityType = GetContainerType();
                 var _key = entityType.DeclaredKey.First();
                 return _key.Type switch {
                      EdmPrimitiveTypeReference primitive => primitive.PrimitiveKind(),
@@ -136,7 +139,7 @@ namespace FStorm
                 var prop = entityType.Properties().First(x => x.Name == _segments.Last().ToString());
                 if (prop != null && prop.PropertyKind == EdmPropertyKind.Structural)
                 {
-                    var _type = (prop as IEdmStructuralProperty).Type;
+                    var _type = (prop as IEdmStructuralProperty)!.Type;
                     result = _type switch
                     {
                         EdmPrimitiveTypeReference primitive => primitive.PrimitiveKind(),

@@ -2,31 +2,29 @@
 
 namespace FStorm
 {
-    public class NavigationPropertyCompiler : Compiler<EdmNavigationProperty>
+    public class NavigationPropertyCompiler
     {
-        private readonly TableOrSubQueryCompiler tableOrSubQueryCompiler;
+        private readonly Compiler compiler;
 
-        public NavigationPropertyCompiler(FStormService fStormService, TableOrSubQueryCompiler tableOrSubQueryCompiler) : base(fStormService)
+        public NavigationPropertyCompiler(Compiler compiler) 
         {
-            this.tableOrSubQueryCompiler = tableOrSubQueryCompiler;
+            this.compiler = compiler;
         }
 
-        public override CompilerContext<EdmNavigationProperty> Compile(CompilerContext<EdmNavigationProperty> context)
+        public CompilerContext Compile(CompilerContext context, EdmNavigationProperty navigationProperty)
         {
-            context.Resource.ResourcePath += context.ContextData.Name;
+            context.Resource.ResourcePath += navigationProperty.Name;
             context.Aliases.Add(context.Resource.ResourcePath);
 
-            TableOrQuery ctx = new TableOrQuery()
+            TableOrQuery config = new TableOrQuery()
             {
                 Alias = context.Resource.ResourcePath,
                 IsTable = true,
                 IsJoin = true,
-                NavProperty = context.ContextData
+                NavProperty = navigationProperty
             };
 
-            tableOrSubQueryCompiler.Compile(context.CloneTo(ctx))
-                .CopyTo(context);
-
+            compiler.AddTableOrSubQuery(context, config);
             return context;
         }
     }

@@ -39,32 +39,4 @@ namespace FStorm
         public ResourceMetadata Resource = new ResourceMetadata();
     }
 
-    /// <summary>
-    /// Typed model passed between compilers. Expose ContextData to keep additional or compiler specific information
-    /// </summary>
-    public class CompilerContext<T> : CompilerContext
-    {
-        public T ContextData = default!;
-
-        public CompilerContext<T1> CloneTo<T1>(T1 ContextData)
-        {
-            CompilerContext<T1> instance = (CompilerContext<T1>)Activator.CreateInstance(typeof(CompilerContext<T1>))!;
-            instance = this.CopyTo(instance);
-            instance.ContextData = ContextData;
-            return instance;
-        }
-
-        public CompilerContext<T1> CopyTo<T1>(CompilerContext<T1> newContext)
-        {
-            newContext.Query = this.Query;
-            newContext.Aliases = this.Aliases;
-            newContext.Resource.OutputType = this.Resource.OutputType;
-            newContext.Resource.ResourcePath = this.Resource.ResourcePath;
-            newContext.Resource.ResourceEdmType = this.Resource.ResourceEdmType;
-            return newContext;
-        }
-    }
-
-
-
 }

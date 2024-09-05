@@ -37,7 +37,7 @@ namespace FStorm
         }
 
 
-        public string WriteResult(CommandResult<CompilerContext<GetRequest>> result)
+        public string WriteResult(CommandResult<CompilerContext> result)
         {
             MemoryStream stream = new MemoryStream();
             Message message = new Message(stream);
@@ -68,7 +68,7 @@ namespace FStorm
             return Encoding.UTF8.GetString(stream.ToArray());
         }
 
-        protected void WriteCollection(ODataWriter odataWriter, CommandResult<CompilerContext<GetRequest>> result) 
+        protected void WriteCollection(ODataWriter odataWriter, CommandResult<CompilerContext> result) 
         {
             ODataResourceSet set = new ODataResourceSet();
             odataWriter.WriteStart(set);
@@ -76,7 +76,7 @@ namespace FStorm
             odataWriter.WriteEnd();
         }
 
-        protected void WriteObject(ODataWriter odataWriter, CommandResult<CompilerContext<GetRequest>> result) 
+        protected void WriteObject(ODataWriter odataWriter, CommandResult<CompilerContext> result) 
         {
             if (result.Value != null)
             {

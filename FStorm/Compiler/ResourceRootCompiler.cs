@@ -1,20 +1,19 @@
 ﻿namespace FStorm
 {
-    public class ResourceRootCompiler : Compiler<EdmEntityType>
+    public class ResourceRootCompiler
     {
-        private readonly TableOrSubQueryCompiler tableOrSubQueryCompiler;
+        private readonly Compiler compiler;
 
-        public ResourceRootCompiler(FStormService fStormService, TableOrSubQueryCompiler tableOrSubQueryCompiler) : base(fStormService)
+        public ResourceRootCompiler(Compiler compiler)
         {
-            this.tableOrSubQueryCompiler = tableOrSubQueryCompiler;
+            this.compiler = compiler;
         }
 
-        public override CompilerContext<EdmEntityType> Compile(CompilerContext<EdmEntityType> context)
+        public CompilerContext Compile(CompilerContext context, EdmEntityType edmEntityType)
         {
-            context.Resource.ResourcePath += context.ContextData.Name;
+            context.Resource.ResourcePath += edmEntityType.Name;
             context.Aliases.Add(context.Resource.ResourcePath);
-            tableOrSubQueryCompiler.Compile(context.CloneTo(new TableOrQuery { Alias = context.Resource.ResourcePath, IsTable = true, Type = context.ContextData }))
-                .CopyTo(context);
+            compiler.AddTableOrSubQuery(context, new TableOrQuery { Alias = context.Resource.ResourcePath, IsTable = true, Type = edmEntityType });
             return context;
         }
     }

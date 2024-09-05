@@ -11,15 +11,9 @@ namespace FStorm
             services.AddSingleton<EdmPathFactory>();
             services.AddTransient<Connection>();
             services.AddTransient<Transaction>();
-            services.AddTransient<GetCommand>();
+            services.AddTransient<GetRequestCommand>();
             services.AddTransient<Writer>();
-            services.AddTransient<GetCompiler>();
-            services.AddTransient<PathCompiler>();
-            services.AddTransient<ResourceRootCompiler>();
-            services.AddTransient<NavigationPropertyCompiler>();
-            services.AddTransient<SelectPropertyCompiler>();
-            services.AddTransient<BinaryFilterCompiler>();
-            services.AddTransient<TableOrSubQueryCompiler>();
+            services.AddSingleton<Compiler>();
         }
     }
 

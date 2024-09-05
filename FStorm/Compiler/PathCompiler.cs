@@ -3,35 +3,23 @@ using Microsoft.OData.UriParser;
 
 namespace FStorm
 {
-    public class PathCompiler : Compiler<ODataPath>
+    public class PathCompiler
     {
+        private readonly Compiler compiler;
         protected readonly EdmPathFactory pathFactory;
-        private readonly ResourceRootCompiler fromCompiler;
-        private readonly NavigationPropertyCompiler navigationPropertyCompiler;
-        private readonly SelectPropertyCompiler selectPropertyCompiler;
-        private readonly BinaryFilterCompiler binaryFilterCompiler;
-
-        public PathCompiler(
-            FStormService fStormService,
-            EdmPathFactory pathFactory,
-            ResourceRootCompiler fromCompiler,
-            NavigationPropertyCompiler navigationPropertyCompiler,
-            SelectPropertyCompiler selectPropertyCompiler,
-            BinaryFilterCompiler binaryFilterCompiler) : base(fStormService)
+        
+        public PathCompiler(Compiler compiler, EdmPathFactory pathFactory)
         {
+            this.compiler = compiler;
             this.pathFactory = pathFactory;
-            this.fromCompiler = fromCompiler;
-            this.navigationPropertyCompiler = navigationPropertyCompiler;
-            this.selectPropertyCompiler = selectPropertyCompiler;
-            this.binaryFilterCompiler = binaryFilterCompiler;
         }
 
-        public override CompilerContext<ODataPath> Compile(CompilerContext<ODataPath> context)
+        public CompilerContext Compile(CompilerContext context, ODataPath oDataPath)
         {
             bool isRoot = true;
             context.Resource.ResourcePath = pathFactory.CreateResourcePath();
 
-            foreach (var segment in context.ContextData)
+            foreach (var segment in oDataPath)
             {
                 switch (segment)
                 {
@@ -40,9 +28,7 @@ namespace FStorm
                             if (!isRoot)
                                 throw new NotImplementedException("Should not pass here");
                             var _edmType = (collection.EdmType.AsElementType() as EdmEntityType)!;
-                            fromCompiler
-                                .Compile(context.CloneTo(_edmType)!)
-                                .CopyTo(context);
+                            compiler.AddResourceRoot(context, _edmType);
                             context.Resource.OutputType= OutputType.Collection;
                             context.Resource.ResourceEdmType = _edmType;
                             break;
@@ -51,26 +37,19 @@ namespace FStorm
                         {
                             var key = single.Keys.First();
                             EdmStructuralProperty keyProperty = (EdmStructuralProperty)((EdmEntityType)single.EdmType).DeclaredKey.First(x => x.Name == key.Key);
-                            binaryFilterCompiler
-                                .Compile(context.CloneTo(new BinaryFilter() { path = context.Resource.ResourcePath, property = keyProperty, value = key.Value }))
-                                .CopyTo(context);
+                            compiler.AddBinaryFilter(context, context.Resource.ResourcePath, keyProperty, "eq",key.Value);
                             context.Resource.OutputType = OutputType.Object;
                             break;
                         }
                     case PropertySegment property:
                         {
-                            selectPropertyCompiler
-                                .Compile(context.CloneTo(new ReferenceToProperty() { path = context.Resource.ResourcePath, property = (EdmStructuralProperty)property.Property }))
-                                .CopyTo(context);
+                            compiler.AddSelectProperty(context,context.Resource.ResourcePath,(EdmStructuralProperty)property.Property);
                             context.Resource.OutputType = OutputType.Property;
                             break;
                         }
                     case NavigationPropertySegment navigationProperty when navigationProperty.EdmType.TypeKind == EdmTypeKind.Collection:
                         {
-                            navigationPropertyCompiler
-                                .Compile(context.CloneTo(navigationProperty.NavigationProperty as EdmNavigationProperty)!)
-                                .CopyTo(context);
-
+                            compiler.AddNavigationProperty(context, (EdmNavigationProperty)navigationProperty.NavigationProperty);
                             var _edmType = (navigationProperty.NavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!;
                             context.Resource.ResourceEdmType = _edmType;
                             context.Resource.OutputType = OutputType.Collection;
@@ -78,10 +57,7 @@ namespace FStorm
                         }
                     case NavigationPropertySegment navigationProperty when navigationProperty.EdmType.TypeKind == EdmTypeKind.Entity:
                         {
-                            navigationPropertyCompiler
-                                .Compile(context.CloneTo(navigationProperty.NavigationProperty as EdmNavigationProperty)!)
-                                .CopyTo(context);
-
+                            compiler.AddNavigationProperty(context, (EdmNavigationProperty)navigationProperty.NavigationProperty);
                             var _edmType = (navigationProperty.NavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!;
                             context.Resource.OutputType = OutputType.Object;
                             context.Resource.ResourceEdmType = _edmType;
@@ -94,7 +70,7 @@ namespace FStorm
             }
 
             if (context.Resource.OutputType != OutputType.Property)
-                context.Resource.ResourceEdmType=(EdmEntityType)context.ContextData.LastSegment.EdmType.AsElementType();
+                context.Resource.ResourceEdmType=(EdmEntityType)oDataPath.LastSegment.EdmType.AsElementType();
             
             return context;
         }
