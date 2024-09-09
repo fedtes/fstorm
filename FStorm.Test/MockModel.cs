@@ -20,6 +20,7 @@ namespace FStorm.Test
             EdmStructuralProperty orderKey = orderType.AddStructuralProperty("Number", EdmPrimitiveTypeKind.String, false, "OrderNumber");
             EdmStructuralProperty orderDate = orderType.AddStructuralProperty("OrderDate", EdmPrimitiveTypeKind.Date, false);
             EdmStructuralProperty orderNote = orderType.AddStructuralProperty("Note", EdmPrimitiveTypeKind.String, true);
+            EdmStructuralProperty total = orderType.AddStructuralProperty("Total", EdmPrimitiveTypeKind.Decimal, false);
             EdmStructuralProperty orderCustomerId = orderType.AddStructuralProperty("CustomerID", EdmPrimitiveTypeKind.Int32, false);
             orderType.AddKey(orderKey);
 

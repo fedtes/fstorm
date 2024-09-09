@@ -7,7 +7,8 @@ namespace FStorm
     {
         Collection,
         Object,
-        Property
+        Property,
+        RawValue
     }
 
     /// <summary>

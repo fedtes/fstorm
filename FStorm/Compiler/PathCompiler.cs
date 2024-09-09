@@ -63,13 +63,20 @@ namespace FStorm
                             context.Resource.ResourceEdmType = _edmType;
                             break;
                         }
+                    case CountSegment count:
+                    {
+                        compiler.AddSelectProperty(context,context.Resource.ResourcePath, context.Resource.ResourceEdmType!.GetEntityKey());
+                        compiler.AddCount(context);
+                        context.Resource.OutputType = OutputType.RawValue;
+                        break;
+                    }
                     default:
                         throw new NotImplementedException("Should not pass here");
                 }
                 isRoot = false;
             }
 
-            if (context.Resource.OutputType != OutputType.Property)
+            if (!new[] {OutputType.Property,OutputType.RawValue}.Contains(context.Resource.OutputType))
                 context.Resource.ResourceEdmType=(EdmEntityType)oDataPath.LastSegment.EdmType.AsElementType();
             
             return context;

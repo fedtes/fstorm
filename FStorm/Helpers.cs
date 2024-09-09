@@ -25,5 +25,7 @@ namespace FStorm
             };
         }
 
+        public static EdmStructuralProperty GetEntityKey(this EdmEntityType type) => (EdmStructuralProperty)type.DeclaredKey.First();
+
     }
 }

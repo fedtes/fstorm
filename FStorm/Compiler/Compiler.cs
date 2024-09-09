@@ -1,4 +1,5 @@
-﻿using Microsoft.OData.Edm;
+﻿using FStorm;
+using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
 namespace FStorm
@@ -13,6 +14,7 @@ namespace FStorm
         private readonly ResourceRootCompiler ResourceRootCompiler;
         private readonly SelectPropertyCompiler SelectPropertyCompiler;
         private readonly TableOrSubQueryCompiler TableOrSubQueryCompiler;
+        private readonly CountCompiler CountCompiler;
 
         public Compiler(FStormService fStormService,EdmPathFactory pathFactory)
         {
@@ -24,6 +26,7 @@ namespace FStorm
             this.ResourceRootCompiler = new ResourceRootCompiler(this);
             this.SelectPropertyCompiler = new SelectPropertyCompiler();
             this.TableOrSubQueryCompiler = new TableOrSubQueryCompiler();
+            this.CountCompiler = new CountCompiler();
         }
 
         public CompilerContext AddBinaryFilter(CompilerContext context, EdmPath path, EdmStructuralProperty property, string op, object? value) => BinaryFilterCompiler.Compile(context,path, property, op, value);
@@ -39,5 +42,16 @@ namespace FStorm
         public CompilerContext AddSelectProperty(CompilerContext context, EdmPath path, EdmStructuralProperty property, string overridedName = "") => SelectPropertyCompiler.Compile(context, path, property, overridedName);
 
         public CompilerContext AddTableOrSubQuery(CompilerContext context, TableOrQuery tableOrQuery) => TableOrSubQueryCompiler.Compile(context, tableOrQuery);
+
+        public CompilerContext AddCount(CompilerContext context) => CountCompiler.Compile(context);
+    }
+}
+
+
+public class CountCompiler
+{
+    public CompilerContext Compile(CompilerContext context) {
+        context.Query.AsCount(new[] {context.Resource.ResourceEdmType!.GetEntityKey().columnName});
+        return context;
     }
 }

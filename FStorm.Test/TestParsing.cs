@@ -123,5 +123,44 @@ namespace FStorm.Test
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
+
+        [Test]
+        public void It_should_count()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection() 
+                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$count" })
+                .ToSQL();
+
+            string expected = @"SELECT COUNT([OrderNumber]) AS [count] FROM [TABCustomers] AS [#/Customer] INNER JOIN [TABOrders] AS [#/Customer/Orders] ON [#/Customer].[CustomerID] = [#/Customer/Orders].[CustomerID] WHERE [#/Customer].[CustomerID] = @p0";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+
+        [Test]
+        public void It_should_address_subset_of_collecton_1()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection() 
+                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(Total gt 100)" })
+                .ToSQL();
+
+            string expected = @"SELECT [#/Order/Customer].[CustomerID] AS [#/Order/Customer/:key], [#/Order/Customer].[CustomerID] AS [#/Order/Customer/ID], [#/Order/Customer].[RagSoc] AS [#/Order/Customer/RagSoc] FROM [TABOrders] AS [#/Order] INNER JOIN [TABCustomers] AS [#/Order/Customer] ON [#/Order].[CustomerID] = [#/Order/Customer].[CustomerID] WHERE [#/Order].[OrderNumber] = @p0";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+
+        [Test]
+        public void It_should_address_subset_of_collecton_2()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection() 
+                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(@expr)?@expr=Total gt 100" })
+                .ToSQL();
+
+            string expected = @"SELECT [#/Order/Customer].[CustomerID] AS [#/Order/Customer/:key], [#/Order/Customer].[CustomerID] AS [#/Order/Customer/ID], [#/Order/Customer].[RagSoc] AS [#/Order/Customer/RagSoc] FROM [TABOrders] AS [#/Order] INNER JOIN [TABCustomers] AS [#/Order/Customer] ON [#/Order].[CustomerID] = [#/Order/Customer].[CustomerID] WHERE [#/Order].[OrderNumber] = @p0";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
     }
 }
