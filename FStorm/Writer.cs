@@ -62,10 +62,18 @@ namespace FStorm
                 case OutputType.Property:
                     WriteObject(writer.CreateODataResourceWriter(entitySet), result);
                     break;
+                case OutputType.RawValue:
+                    if (result.Value != null) {
+                        writer.WriteValue(result.Value.First().First().Value);//;
+                    }
+                    break;
                 default:
                     break;
             }
-            return Encoding.UTF8.GetString(stream.ToArray());
+
+            stream.Position = 0;
+            StreamReader reader = new StreamReader(stream);
+            return reader.ReadToEnd();
         }
 
         protected void WriteCollection(ODataWriter odataWriter, CommandResult<CompilerContext> result) 

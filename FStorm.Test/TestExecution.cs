@@ -77,5 +77,19 @@ namespace FStorm.Test
             Assert.That(sr.ToString(), Is.EqualTo("{\"@odata.context\":\"https://my.service/odata/$metadata#Customers(1)/RagSoc\",\"RagSoc\":\"ACME\"}"));
         }
 
+
+        [Test]
+        public async Task It_Should_count_collection()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var con = _FStormService.OpenConnection();
+
+            var r = await con.Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$count" }).ToListAsync();
+
+            var w = serviceProvider.GetService<Writer>()!;
+            var sr = w.WriteResult(r);
+            Assert.That(sr.ToString(), Is.EqualTo("2"));
+        }
+
     }
 }

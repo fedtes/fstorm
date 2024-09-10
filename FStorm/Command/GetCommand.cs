@@ -75,25 +75,35 @@ namespace FStorm
 
                 DataTable dt = new DataTable(compileResult.Context.Resource.ResourcePath);
 
-                using (var r = await cmd.ExecuteReaderAsync())
+                if (compileResult.Context.Resource.OutputType != OutputType.RawValue) 
                 {
-                    int rowIdx = 0;
-                    while (await r.ReadAsync())
+                    using (var r = await cmd.ExecuteReaderAsync())
                     {
-                        // Add Columns to data table
-                        if (0==rowIdx) {
-                            for (int i = 0; i < r.FieldCount; i++) {
-                                dt.AddColumn(pathFactory.Parse(r.GetName(i)));
+                        int rowIdx = 0;
+                        while (await r.ReadAsync())
+                        {
+                            // Add Columns to data table
+                            if (0==rowIdx) {
+                                for (int i = 0; i < r.FieldCount; i++) {
+                                    dt.AddColumn(pathFactory.Parse(r.GetName(i)));
+                                }
+                            }
+                            // Fill row values
+                            var row = dt.CreateRow();
+                            for (int i = 0; i < r.FieldCount; i++)
+                            {
+                                var p = pathFactory.Parse(r.GetName(i));
+                                row[p] = r.IsDBNull(i) ? null : Helpers.TypeConverter(r.GetValue(i), p.GetTypeKind());
                             }
                         }
-                        // Fill row values
-                        var row = dt.CreateRow();
-                        for (int i = 0; i < r.FieldCount; i++)
-                        {
-                            var p = pathFactory.Parse(r.GetName(i));
-                            row[p] = r.IsDBNull(i) ? null : Helpers.TypeConverter(r.GetValue(i), p.GetTypeKind());
-                        }
                     }
+                }
+                else 
+                {
+                    var valuePath = pathFactory.Parse("#/value");
+                    dt.AddColumn(valuePath);
+                    var row = dt.CreateRow();
+                    row[valuePath] = await cmd.ExecuteScalarAsync();
                 }
 
                 _result.Value = dt;
