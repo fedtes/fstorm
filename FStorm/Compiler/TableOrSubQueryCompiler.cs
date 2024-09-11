@@ -28,7 +28,7 @@ namespace FStorm
                     var constraint = tableOrQuery.NavProperty.ReferentialConstraint.PropertyPairs.First();
                     var sourceProperty = (EdmStructuralProperty)constraint.PrincipalProperty;
                     var targetProperty = (EdmStructuralProperty)constraint.DependentProperty;
-                    context.Query.Join(type.Table + $" as {context.Resource.ResourcePath}", $"{context.Resource.ResourcePath - 1}.{sourceProperty.columnName}", $"{context.Resource.ResourcePath}.{targetProperty.columnName}");
+                    context.Query.Join(type.Table + $" as {context.Output.ResourcePath}", $"{context.Output.ResourcePath - 1}.{sourceProperty.columnName}", $"{context.Output.ResourcePath}.{targetProperty.columnName}");
                 }
             } 
             else

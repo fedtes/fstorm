@@ -11,9 +11,9 @@
 
         public CompilerContext Compile(CompilerContext context, EdmEntityType edmEntityType)
         {
-            context.Resource.ResourcePath += edmEntityType.Name;
-            context.Aliases.Add(context.Resource.ResourcePath);
-            compiler.AddTableOrSubQuery(context, new TableOrQuery { Alias = context.Resource.ResourcePath, IsTable = true, Type = edmEntityType });
+            context.Output.ResourcePath += edmEntityType.Name;
+            context.Aliases.AddOrGet(context.Output.ResourcePath);
+            compiler.AddTableOrSubQuery(context, new TableOrQuery { Alias = context.Output.ResourcePath, IsTable = true, Type = edmEntityType });
             return context;
         }
     }

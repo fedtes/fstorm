@@ -13,12 +13,12 @@ namespace FStorm
 
         public CompilerContext Compile(CompilerContext context, EdmNavigationProperty navigationProperty)
         {
-            context.Resource.ResourcePath += navigationProperty.Name;
-            context.Aliases.Add(context.Resource.ResourcePath);
+            context.Output.ResourcePath += navigationProperty.Name;
+            context.Aliases.AddOrGet(context.Output.ResourcePath);
 
             TableOrQuery config = new TableOrQuery()
             {
-                Alias = context.Resource.ResourcePath,
+                Alias = context.Output.ResourcePath,
                 IsTable = true,
                 IsJoin = true,
                 NavProperty = navigationProperty

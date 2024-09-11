@@ -20,13 +20,13 @@ namespace FStorm
             ODataPath path = parser.ParsePath();
             compiler.AddPath(context, path);
             //Add entity resource key
-            compiler.AddSelectProperty(context, context.Resource.ResourcePath, (EdmStructuralProperty)context.Resource.ResourceEdmType.Key().First(), ":key");
+            compiler.AddSelectProperty(context, context.Output.ResourcePath, (EdmStructuralProperty)context.Output.ResourceEdmType.Key().First(), ":key");
             //Add output columns if not already specified
-            if (context.Resource.OutputType == OutputType.Object || context.Resource.OutputType == OutputType.Collection)
+            if (context.Output.OutputType == OutputType.Object || context.Output.OutputType == OutputType.Collection)
             {
-                foreach (EdmStructuralProperty p in (context.Resource.ResourceEdmType.AsElementType() as EdmEntityType)!.StructuralProperties().Cast<EdmStructuralProperty>())
+                foreach (EdmStructuralProperty p in (context.Output.ResourceEdmType.AsElementType() as EdmEntityType)!.StructuralProperties().Cast<EdmStructuralProperty>())
                 {
-                    compiler.AddSelectProperty(context, context.Resource.ResourcePath, p);
+                    compiler.AddSelectProperty(context, context.Output.ResourcePath, p);
                 }
             }
             return context;

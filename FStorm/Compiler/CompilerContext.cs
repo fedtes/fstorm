@@ -1,4 +1,5 @@
-﻿using Microsoft.OData.UriParser;
+﻿using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace FStorm
 {
@@ -11,15 +12,37 @@ namespace FStorm
         RawValue
     }
 
+
+    
+
     /// <summary>
     /// Model passed between compilers.
     /// </summary>
     public class CompilerContext
     {
+        public class AliasStore
+        {
+
+            private List<EdmPath> Aliases = new List<EdmPath>();
+
+            public string AddOrGet(EdmPath path) {
+                if (!Contains(path))
+                    Aliases.Add(path);
+                return path.ToString();
+            }
+
+            public bool Contains(EdmPath path) {
+               return Aliases.Contains(path);
+            }
+
+
+        }
+
+
         /// <summary>
         /// Define metadata of the resource requested via request path.
         /// </summary>
-        public class ResourceMetadata
+        public class OutputData
         {
             public OutputType OutputType;
             public EdmPath ResourcePath = null!;
@@ -35,9 +58,45 @@ namespace FStorm
         /// <summary>
         /// List of all aliases used in the From clausole
         /// </summary>
-        public List<EdmPath> Aliases = new List<EdmPath>();
+        public readonly AliasStore Aliases = new AliasStore();
 
-        public ResourceMetadata Resource = new ResourceMetadata();
+        internal OutputData Output = new OutputData();
+
+        internal EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
+        {
+            var p = Aliases.AddOrGet(edmPath);
+            Query.From(edmEntityType.Table + " as " + p.ToString());
+            return edmPath;
+        }
+
+        internal EdmPath AddJoin(EdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath)
+        {
+            var r = Aliases.AddOrGet(rightPath);
+            var l = Aliases.AddOrGet(leftPath);
+            var constraint = rightNavigationProperty.ReferentialConstraint.PropertyPairs.First();
+            var sourceProperty = (EdmStructuralProperty)constraint.PrincipalProperty;
+            var targetProperty = (EdmStructuralProperty)constraint.DependentProperty;
+            Query.Join((rightNavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!.Table + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+            return leftPath;
+        }
+
+        internal void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
+        {
+            var p = Aliases.AddOrGet(edmPath);
+            Query.Select($"{p}.{property.columnName} as {p}/{(customName ?? property.Name)}");
+        }
+
+        internal void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty)
+        {
+            var p = Aliases.AddOrGet(edmPath);
+            Query.AsCount(new string[] {$"{p}.{edmStructuralProperty.columnName}"});
+        }
+
+        internal void AddWhere(EdmResourcePath edmResourcePath, EdmStructuralProperty k, object value)
+        {
+            var p = Aliases.AddOrGet(edmResourcePath);
+            Query.Where($"{p}.{k.columnName}",value);
+        }
     }
 
 }

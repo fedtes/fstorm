@@ -45,15 +45,15 @@ namespace FStorm
             settings.ODataUri = new ODataUri 
             { 
                 ServiceRoot = new Uri(service.options.ServiceRoot),
-                Path = result.Context.Resource.ODataPath,
+                Path = result.Context.Output.ODataPath,
                 SelectAndExpand = null,
                 Apply = null
             };
             ODataMessageWriter writer = new ODataMessageWriter(message, settings, service.Model);
             IEdmEntitySet entitySet = service.Model.EntityContainer.EntitySets().
-                Where(x => x.EntityType == result.Context.Resource.ResourceEdmType).First();
+                Where(x => x.EntityType == result.Context.Output.ResourceEdmType).First();
 
-            switch (result.Context.Resource.OutputType)
+            switch (result.Context.Output.OutputType)
             {
                 case OutputType.Collection:
                     WriteCollection(writer.CreateODataResourceSetWriter(entitySet), result);

@@ -19,6 +19,8 @@ namespace FStorm
 
     public abstract class EdmPath : IEnumerable<EdmSegment>
     {
+
+        public const string PATH_ROOT = "~";
         protected List<EdmSegment> _segments;
         protected readonly FStormService fStormService;
 
@@ -97,7 +99,7 @@ namespace FStorm
 
         public override EdmPath Clone() => new EdmResourcePath(fStormService, this._segments.ToArray());
 
-        public override string ToString() => "#/" + base.ToString();
+        public override string ToString() =>  EdmPath.PATH_ROOT + "/" + base.ToString();
 
         public override bool IsPathToKey() => _segments.Last().Identifier == ":key";
 
@@ -109,7 +111,7 @@ namespace FStorm
                 if (i == 0)
                 {
                     var ns = fStormService.Model.DeclaredNamespaces.First();
-                    entityType = (EdmEntityType?)fStormService.Model.FindDeclaredType(ns + "." + _segments[i].ToString()).AsActualType();
+                    entityType = (EdmEntityType?)fStormService.Model.FindDeclaredEntitySet(_segments[i].ToString()).Type.AsElementType();
                 }
                 else
                 {
@@ -171,7 +173,7 @@ namespace FStorm
         public EdmPath Parse(string path)
         {
             if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path));
-            if (path.StartsWith("#"))
+            if (path.StartsWith(EdmPath.PATH_ROOT))
             {
                 return new EdmResourcePath(fStormService, path.Substring(2).Split("/"));
             }

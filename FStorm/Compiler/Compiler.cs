@@ -51,7 +51,7 @@ namespace FStorm
 public class CountCompiler
 {
     public CompilerContext Compile(CompilerContext context) {
-        context.Query.AsCount(new[] {context.Resource.ResourceEdmType!.GetEntityKey().columnName});
+        context.Query.AsCount(new[] {context.Output.ResourceEdmType!.GetEntityKey().columnName});
         return context;
     }
 }

@@ -27,7 +27,7 @@ namespace FStorm.Test
         {
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
             var path = factory.CreateResourcePath("Customers");
-            Assert.That(path.ToString(), Is.EqualTo("#/Customers"));
+            Assert.That(path.ToString(), Is.EqualTo("~/Customers"));
         }
 
 
@@ -36,7 +36,7 @@ namespace FStorm.Test
         {
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
             var path = factory.CreateResourcePath("Customers", "Orders");
-            Assert.That(path.ToString(), Is.EqualTo("#/Customers/Orders"));
+            Assert.That(path.ToString(), Is.EqualTo("~/Customers/Orders"));
         }
 
 
@@ -46,8 +46,8 @@ namespace FStorm.Test
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
             var path = factory.CreateResourcePath("Customers");
             var path1 = path + "Orders";
-            Assert.That(path.ToString(), Is.EqualTo("#/Customers"));
-            Assert.That(path1.ToString(), Is.EqualTo("#/Customers/Orders"));
+            Assert.That(path.ToString(), Is.EqualTo("~/Customers"));
+            Assert.That(path1.ToString(), Is.EqualTo("~/Customers/Orders"));
         }
 
         [Test]
@@ -57,9 +57,9 @@ namespace FStorm.Test
             var path = factory.CreateResourcePath("Customers");
             var path1 = path + "Orders";
             var path2 = path1 - 1;
-            Assert.That(path.ToString(), Is.EqualTo("#/Customers"));
-            Assert.That(path1.ToString(), Is.EqualTo("#/Customers/Orders"));
-            Assert.That(path2.ToString(), Is.EqualTo("#/Customers"));
+            Assert.That(path.ToString(), Is.EqualTo("~/Customers"));
+            Assert.That(path1.ToString(), Is.EqualTo("~/Customers/Orders"));
+            Assert.That(path2.ToString(), Is.EqualTo("~/Customers"));
         }
 
         [Test]
@@ -83,19 +83,19 @@ namespace FStorm.Test
         public void It_should_sort_datatable_columns()
         {
             EdmPathFactory factory = serviceProvider.GetService<EdmPathFactory>()!;
-            DataTable dt = new DataTable(factory.Parse("#/Customer"));
-            dt.AddColumn(factory.Parse("#/Customer/:key"));
-            dt.AddColumn(factory.Parse("#/Customer/Orders/OrderNumber"));
-            dt.AddColumn(factory.Parse("#/Customer/ID"));
-            dt.AddColumn(factory.Parse("#/Customer/Orders/:key"));
-            dt.AddColumn(factory.Parse("#/Customer/RagSoc"));
+            DataTable dt = new DataTable(factory.Parse("~/Customer"));
+            dt.AddColumn(factory.Parse("~/Customer/:key"));
+            dt.AddColumn(factory.Parse("~/Customer/Orders/OrderNumber"));
+            dt.AddColumn(factory.Parse("~/Customer/ID"));
+            dt.AddColumn(factory.Parse("~/Customer/Orders/:key"));
+            dt.AddColumn(factory.Parse("~/Customer/RagSoc"));
 
             var s = dt.SortedColumns();
-            Assert.That(s[0].ToString(), Is.EqualTo("#/Customer/:key"));
-            Assert.That(s[1].ToString(), Is.EqualTo("#/Customer/ID"));
-            Assert.That(s[2].ToString(), Is.EqualTo("#/Customer/RagSoc"));
-            Assert.That(s[3].ToString(), Is.EqualTo("#/Customer/Orders/:key"));
-            Assert.That(s[4].ToString(), Is.EqualTo("#/Customer/Orders/OrderNumber"));
+            Assert.That(s[0].ToString(), Is.EqualTo("~/Customer/:key"));
+            Assert.That(s[1].ToString(), Is.EqualTo("~/Customer/ID"));
+            Assert.That(s[2].ToString(), Is.EqualTo("~/Customer/RagSoc"));
+            Assert.That(s[3].ToString(), Is.EqualTo("~/Customer/Orders/:key"));
+            Assert.That(s[4].ToString(), Is.EqualTo("~/Customer/Orders/OrderNumber"));
         }
 
     }

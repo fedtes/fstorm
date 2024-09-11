@@ -14,6 +14,7 @@ namespace FStorm
             services.AddTransient<GetRequestCommand>();
             services.AddTransient<Writer>();
             services.AddSingleton<Compiler>();
+            services.AddSingleton<SemanticVisitor>();
         }
     }
 

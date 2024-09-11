@@ -24,15 +24,18 @@ namespace FStorm
     public class GetRequestCommand : Command
     {
         private readonly Compiler compiler;
+        private readonly SemanticVisitor visitor;
         private readonly EdmPathFactory pathFactory;
 
         public GetRequestCommand(
             IServiceProvider serviceProvider,
             FStormService fStormService,
             Compiler compiler,
+            SemanticVisitor visitor,
             EdmPathFactory pathFactory) : base(serviceProvider, fStormService)
         {
             this.compiler = compiler;
+            this.visitor = visitor;
             this.pathFactory = pathFactory;
         }
 
@@ -42,8 +45,22 @@ namespace FStorm
         {
             var context = new CompilerContext();
             ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.ResourcePath, UriKind.Relative));
-            context.Resource.ODataPath = parser.ParsePath();
-            context = compiler.AddGet(context, Configuration);
+            context.Output.ODataPath = parser.ParsePath();
+            visitor.VisitPath(context, context.Output.ODataPath);
+
+            /* Write output */
+            if (context.Output.OutputType == OutputType.Collection || context.Output.OutputType == OutputType.Object)
+            {
+                foreach (var property in context.Output.ResourceEdmType.DeclaredStructuralProperties())
+                {
+                    if (property.IsKey()) context.AddSelect(context.Output.ResourcePath, (EdmStructuralProperty)property, ":key");
+                    context.AddSelect(context.Output.ResourcePath, (EdmStructuralProperty)property);
+
+                }
+            }
+
+
+            //context = compiler.AddGet(context, Configuration);
             return Compile(context);
         }
 
@@ -73,9 +90,9 @@ namespace FStorm
                     cmd.Parameters.Add(p);
                 }
 
-                DataTable dt = new DataTable(compileResult.Context.Resource.ResourcePath);
+                DataTable dt = new DataTable(compileResult.Context.Output.ResourcePath);
 
-                if (compileResult.Context.Resource.OutputType != OutputType.RawValue) 
+                if (compileResult.Context.Output.OutputType != OutputType.RawValue) 
                 {
                     using (var r = await cmd.ExecuteReaderAsync())
                     {
@@ -100,7 +117,7 @@ namespace FStorm
                 }
                 else 
                 {
-                    var valuePath = pathFactory.Parse("#/value");
+                    var valuePath = pathFactory.Parse(EdmPath.PATH_ROOT + "/value");
                     dt.AddColumn(valuePath);
                     var row = dt.CreateRow();
                     row[valuePath] = await cmd.ExecuteScalarAsync();
