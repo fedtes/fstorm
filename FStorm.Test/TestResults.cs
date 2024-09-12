@@ -83,6 +83,8 @@ public class TestResults
         Assert.That(dos.First()["ID"], Is.EqualTo(1));
         Assert.That((dos.First()["Orders"] as DataObjects)!.Count, Is.EqualTo(4));
         Assert.That((dos.First()["Orders"] as DataObjects)!.Last()["OrderNumber"], Is.EqualTo("O_4"));
+#pragma warning disable CS0252 // Possible unintended reference comparison; left hand side needs cast
         Assert.That((dos.First(x=> x["RagSoc"]=="DreamSolutions")["Orders"] as DataObjects)!.Count, Is.EqualTo(0));
+#pragma warning restore CS0252 // Possible unintended reference comparison; left hand side needs cast
     }
 }

@@ -23,18 +23,15 @@ namespace FStorm
 
     public class GetRequestCommand : Command
     {
-        private readonly Compiler compiler;
         private readonly SemanticVisitor visitor;
         private readonly EdmPathFactory pathFactory;
 
         public GetRequestCommand(
             IServiceProvider serviceProvider,
             FStormService fStormService,
-            Compiler compiler,
             SemanticVisitor visitor,
             EdmPathFactory pathFactory) : base(serviceProvider, fStormService)
         {
-            this.compiler = compiler;
             this.visitor = visitor;
             this.pathFactory = pathFactory;
         }
@@ -49,16 +46,17 @@ namespace FStorm
             visitor.VisitPath(context, context.Output.ODataPath);
 
             /* Write output */
-            if (context.Output.OutputType == OutputType.Collection || context.Output.OutputType == OutputType.Object)
-            {
-                foreach (var property in context.Output.ResourceEdmType.DeclaredStructuralProperties())
-                {
-                    if (property.IsKey()) context.AddSelect(context.Output.ResourcePath, (EdmStructuralProperty)property, ":key");
-                    context.AddSelect(context.Output.ResourcePath, (EdmStructuralProperty)property);
-
-                }
+            if (context.GetOutputKind() == OutputType.Collection || context.GetOutputKind() == OutputType.Object || context.GetOutputKind() == OutputType.Property) {
+                    context.AddSelect(context.GetOutputPath(), context.GetOutputType()!.GetEntityKey(), ":key");
             }
 
+            if (context.GetOutputKind() == OutputType.Collection || context.GetOutputKind() == OutputType.Object)
+            {
+                foreach (var property in context.GetOutputType().DeclaredStructuralProperties())
+                {
+                    context.AddSelect(context.GetOutputPath(), (EdmStructuralProperty)property);
+                }
+            }
 
             //context = compiler.AddGet(context, Configuration);
             return Compile(context);
@@ -90,9 +88,9 @@ namespace FStorm
                     cmd.Parameters.Add(p);
                 }
 
-                DataTable dt = new DataTable(compileResult.Context.Output.ResourcePath);
+                DataTable dt = new DataTable(compileResult.Context.GetOutputPath());
 
-                if (compileResult.Context.Output.OutputType != OutputType.RawValue) 
+                if (compileResult.Context.GetOutputKind() != OutputType.RawValue) 
                 {
                     using (var r = await cmd.ExecuteReaderAsync())
                     {

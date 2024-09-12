@@ -57,7 +57,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/RagSoc" })
                 .ToSQL();
 
-            string expected = "SELECT [~/Customers].[RagSoc] AS [~/Customers/RagSoc] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[CustomerID] = @p0";
+            string expected = "SELECT [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[CustomerID] AS [~/Customers/:key] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[CustomerID] = @p0";
             Assert.That(_SqlQuery.Statement, Is.EqualTo(expected));
         }
 
@@ -94,7 +94,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')/OrderDate" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0 AND [~/Customers/Orders].[OrderNumber] = @p1";
+            string expected = @"SELECT [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0 AND [~/Customers/Orders].[OrderNumber] = @p1";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 

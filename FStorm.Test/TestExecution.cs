@@ -7,7 +7,7 @@ namespace FStorm.Test
     {
 
         IServiceProvider serviceProvider;
-        SqliteConnection connection;
+        //SqliteConnection connection;
 
         [TearDown()]
         public void TearDown()

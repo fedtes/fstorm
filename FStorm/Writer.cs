@@ -51,9 +51,9 @@ namespace FStorm
             };
             ODataMessageWriter writer = new ODataMessageWriter(message, settings, service.Model);
             IEdmEntitySet entitySet = service.Model.EntityContainer.EntitySets().
-                Where(x => x.EntityType == result.Context.Output.ResourceEdmType).First();
+                Where(x => x.EntityType == result.Context.GetOutputType()).First();
 
-            switch (result.Context.Output.OutputType)
+            switch (result.Context.GetOutputKind())
             {
                 case OutputType.Collection:
                     WriteCollection(writer.CreateODataResourceSetWriter(entitySet), result);

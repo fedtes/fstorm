@@ -45,9 +45,9 @@ public class SemanticVisitor
     public void VisitEntitySetSegment(CompilerContext context, Microsoft.OData.UriParser.EntitySetSegment entitySetSegment) 
     {
         EdmPath alias = context.AddFrom((EdmEntityType)entitySetSegment.EdmType.AsElementType(), pathFactory.Parse(EdmPath.PATH_ROOT + "/" + entitySetSegment.Identifier));
-        context.Output.OutputType= OutputType.Collection;
-        context.Output.ResourceEdmType = (EdmEntityType)entitySetSegment.EdmType.AsElementType();
-        context.Output.ResourcePath = alias;
+        context.SetOutputKind(OutputType.Collection);
+        context.SetOutputType((EdmEntityType)entitySetSegment.EdmType.AsElementType());
+        context.SetOutputPath(alias);
     }
 
     public void VisitNavigationPropertySegment(CompilerContext context, Microsoft.OData.UriParser.NavigationPropertySegment navigationPropertySegment) 
@@ -55,41 +55,43 @@ public class SemanticVisitor
 
         EdmPath alias = context.AddJoin(
             (EdmNavigationProperty)navigationPropertySegment.NavigationProperty,
-            context.Output.ResourcePath,
-            context.Output.ResourcePath + navigationPropertySegment.NavigationProperty.Name
+            context.GetOutputPath(),
+            context.GetOutputPath() + navigationPropertySegment.NavigationProperty.Name
         );
 
-        context.Output.OutputType = navigationPropertySegment.EdmType.TypeKind == EdmTypeKind.Collection ? OutputType.Collection : OutputType.Object;
-        context.Output.ResourceEdmType = (EdmEntityType)navigationPropertySegment.EdmType.AsElementType();
-        context.Output.ResourcePath = alias;
+        context.SetOutputKind(navigationPropertySegment.EdmType.TypeKind == EdmTypeKind.Collection ? OutputType.Collection : OutputType.Object);
+        context.SetOutputType((EdmEntityType)navigationPropertySegment.EdmType.AsElementType());
+        context.SetOutputPath(alias);
     }
 
     public void VisitKeySegment(CompilerContext context, Microsoft.OData.UriParser.KeySegment keySegment) 
     {
         var k = (keySegment.NavigationSource.Type.AsElementType() as EdmEntityType)!.GetEntityKey();
         context.AddWhere(pathFactory.CreateResourcePath(keySegment.NavigationSource.Path.PathSegments.ToArray()), k, keySegment.Keys.First().Value);
-        context.Output.OutputType = OutputType.Object;
+        context.SetOutputKind(OutputType.Object);
     }
 
     public void VisitPropertySegment(CompilerContext context, Microsoft.OData.UriParser.PropertySegment propertySegment) 
     {
-        context.AddSelect(context.Output.ResourcePath , (EdmStructuralProperty)propertySegment.Property);
-        context.Output.OutputType = OutputType.Property;
+        context.AddSelect(context.GetOutputPath() , (EdmStructuralProperty)propertySegment.Property);
+        context.SetOutputKind(OutputType.Property);
     }
 
     public void VisitCountSegment(CompilerContext context, Microsoft.OData.UriParser.CountSegment countSegment) 
     {
-        context.AddCount(context.Output.ResourcePath, context.Output.ResourceEdmType!.GetEntityKey());
-        context.Output.OutputType = OutputType.RawValue;
+        context.AddCount(context.GetOutputPath(), context.GetOutputType()!.GetEntityKey());
+        context.SetOutputKind(OutputType.RawValue);
     }
 
     public void VisitFilterSegment(CompilerContext context, Microsoft.OData.UriParser.FilterSegment filterSegment)
     {
-        throw new NotImplementedException();
+        
+        VisitExpression(context, filterSegment.RangeVariable, filterSegment.Expression);
+        context.WrapQuery(context.GetOutputPath());
     }
 
 
-    public void VisitSingleValueNode(CompilerContext context, Microsoft.OData.UriParser.SingleValueNode singleValueNode) 
+    public void VisitExpression(CompilerContext context,Microsoft.OData.UriParser.RangeVariable variable ,Microsoft.OData.UriParser.SingleValueNode singleValueNode) 
     {
         throw new NotImplementedException();
     }

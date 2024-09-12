@@ -13,7 +13,6 @@ namespace FStorm
             services.AddTransient<Transaction>();
             services.AddTransient<GetRequestCommand>();
             services.AddTransient<Writer>();
-            services.AddSingleton<Compiler>();
             services.AddSingleton<SemanticVisitor>();
         }
     }

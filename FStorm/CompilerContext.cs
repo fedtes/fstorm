@@ -62,6 +62,25 @@ namespace FStorm
 
         internal OutputData Output = new OutputData();
 
+
+        internal void SetOutputKind(OutputType OutputType) {
+            Output.OutputType = OutputType;
+        }
+
+        internal OutputType GetOutputKind() => Output.OutputType;
+
+        internal void SetOutputPath(EdmPath ResourcePath) {
+            Output.ResourcePath = ResourcePath;
+        }
+
+        internal EdmPath GetOutputPath() => Output.ResourcePath;
+
+        internal void SetOutputType(EdmEntityType? ResourceEdmType) {
+            Output.ResourceEdmType = ResourceEdmType;
+        }
+
+        internal EdmEntityType? GetOutputType() => Output.ResourceEdmType;
+
         internal EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
         {
             var p = Aliases.AddOrGet(edmPath);
@@ -96,6 +115,11 @@ namespace FStorm
         {
             var p = Aliases.AddOrGet(edmResourcePath);
             Query.Where($"{p}.{k.columnName}",value);
+        }
+
+        internal void WrapQuery(EdmPath resourcePath)
+        {
+            throw new NotImplementedException();
         }
     }
 
