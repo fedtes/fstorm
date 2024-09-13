@@ -31,7 +31,7 @@ namespace FStorm
                 _ => throw new ArgumentException("Unexpected compiler type value")
             };
 
-            var _compilerOutput = compiler.Compile(context.Query);
+            var _compilerOutput = compiler.Compile(context.GetQuery());
             return new SQLCompiledQuery(context, _compilerOutput.Sql, _compilerOutput.NamedBindings);
         }
     }

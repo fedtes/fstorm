@@ -45,7 +45,7 @@ public class SemanticVisitor
     public void VisitEntitySetSegment(CompilerContext context, Microsoft.OData.UriParser.EntitySetSegment entitySetSegment) 
     {
         EdmPath alias = context.AddFrom((EdmEntityType)entitySetSegment.EdmType.AsElementType(), pathFactory.Parse(EdmPath.PATH_ROOT + "/" + entitySetSegment.Identifier));
-        context.SetOutputKind(OutputType.Collection);
+        context.SetOutputKind(OutputKind.Collection);
         context.SetOutputType((EdmEntityType)entitySetSegment.EdmType.AsElementType());
         context.SetOutputPath(alias);
     }
@@ -59,7 +59,7 @@ public class SemanticVisitor
             context.GetOutputPath() + navigationPropertySegment.NavigationProperty.Name
         );
 
-        context.SetOutputKind(navigationPropertySegment.EdmType.TypeKind == EdmTypeKind.Collection ? OutputType.Collection : OutputType.Object);
+        context.SetOutputKind(navigationPropertySegment.EdmType.TypeKind == EdmTypeKind.Collection ? OutputKind.Collection : OutputKind.Object);
         context.SetOutputType((EdmEntityType)navigationPropertySegment.EdmType.AsElementType());
         context.SetOutputPath(alias);
     }
@@ -68,19 +68,19 @@ public class SemanticVisitor
     {
         var k = (keySegment.NavigationSource.Type.AsElementType() as EdmEntityType)!.GetEntityKey();
         context.AddWhere(pathFactory.CreateResourcePath(keySegment.NavigationSource.Path.PathSegments.ToArray()), k, keySegment.Keys.First().Value);
-        context.SetOutputKind(OutputType.Object);
+        context.SetOutputKind(OutputKind.Object);
     }
 
     public void VisitPropertySegment(CompilerContext context, Microsoft.OData.UriParser.PropertySegment propertySegment) 
     {
         context.AddSelect(context.GetOutputPath() , (EdmStructuralProperty)propertySegment.Property);
-        context.SetOutputKind(OutputType.Property);
+        context.SetOutputKind(OutputKind.Property);
     }
 
     public void VisitCountSegment(CompilerContext context, Microsoft.OData.UriParser.CountSegment countSegment) 
     {
         context.AddCount(context.GetOutputPath(), context.GetOutputType()!.GetEntityKey());
-        context.SetOutputKind(OutputType.RawValue);
+        context.SetOutputKind(OutputKind.RawValue);
     }
 
     public void VisitFilterSegment(CompilerContext context, Microsoft.OData.UriParser.FilterSegment filterSegment)

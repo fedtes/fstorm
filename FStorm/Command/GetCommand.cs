@@ -40,17 +40,16 @@ namespace FStorm
 
         public override SQLCompiledQuery ToSQL()
         {
-            var context = new CompilerContext();
             ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.ResourcePath, UriKind.Relative));
-            context.Output.ODataPath = parser.ParsePath();
-            visitor.VisitPath(context, context.Output.ODataPath);
+            var context = new CompilerContext(parser.ParsePath());
+            visitor.VisitPath(context, context.GetOdataRequestPath());
 
             /* Write output */
-            if (context.GetOutputKind() == OutputType.Collection || context.GetOutputKind() == OutputType.Object || context.GetOutputKind() == OutputType.Property) {
+            if (context.GetOutputKind() == OutputKind.Collection || context.GetOutputKind() == OutputKind.Object || context.GetOutputKind() == OutputKind.Property) {
                     context.AddSelect(context.GetOutputPath(), context.GetOutputType()!.GetEntityKey(), ":key");
             }
 
-            if (context.GetOutputKind() == OutputType.Collection || context.GetOutputKind() == OutputType.Object)
+            if (context.GetOutputKind() == OutputKind.Collection || context.GetOutputKind() == OutputKind.Object)
             {
                 foreach (var property in context.GetOutputType().DeclaredStructuralProperties())
                 {
@@ -90,7 +89,7 @@ namespace FStorm
 
                 DataTable dt = new DataTable(compileResult.Context.GetOutputPath());
 
-                if (compileResult.Context.GetOutputKind() != OutputType.RawValue) 
+                if (compileResult.Context.GetOutputKind() != OutputKind.RawValue) 
                 {
                     using (var r = await cmd.ExecuteReaderAsync())
                     {

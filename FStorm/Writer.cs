@@ -45,7 +45,7 @@ namespace FStorm
             settings.ODataUri = new ODataUri 
             { 
                 ServiceRoot = new Uri(service.options.ServiceRoot),
-                Path = result.Context.Output.ODataPath,
+                Path = result.Context.GetOdataRequestPath(),
                 SelectAndExpand = null,
                 Apply = null
             };
@@ -55,14 +55,14 @@ namespace FStorm
 
             switch (result.Context.GetOutputKind())
             {
-                case OutputType.Collection:
+                case OutputKind.Collection:
                     WriteCollection(writer.CreateODataResourceSetWriter(entitySet), result);
                     break;
-                case OutputType.Object:
-                case OutputType.Property:
+                case OutputKind.Object:
+                case OutputKind.Property:
                     WriteObject(writer.CreateODataResourceWriter(entitySet), result);
                     break;
-                case OutputType.RawValue:
+                case OutputKind.RawValue:
                     if (result.Value != null) {
                         writer.WriteValue(result.Value.First().First().Value);//;
                     }

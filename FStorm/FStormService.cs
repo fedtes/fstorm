@@ -51,7 +51,7 @@ namespace FStorm
         }
 
         public EdmModel Model { get; }
-        public Uri ServiceRoot { get; }      
+        public Uri ServiceRoot { get; }
 
         public Connection OpenConnection()
         {

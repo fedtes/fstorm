@@ -3,84 +3,42 @@ using Microsoft.OData.UriParser;
 
 namespace FStorm
 {
-
-    public enum OutputType
-    {
-        Collection,
-        Object,
-        Property,
-        RawValue
-    }
-
-
-    
-
     /// <summary>
     /// Model passed between compilers.
     /// </summary>
     public class CompilerContext
     {
-        public class AliasStore
-        {
-
-            private List<EdmPath> Aliases = new List<EdmPath>();
-
-            public string AddOrGet(EdmPath path) {
-                if (!Contains(path))
-                    Aliases.Add(path);
-                return path.ToString();
-            }
-
-            public bool Contains(EdmPath path) {
-               return Aliases.Contains(path);
-            }
-
-
-        }
-
-
-        /// <summary>
-        /// Define metadata of the resource requested via request path.
-        /// </summary>
-        public class OutputData
-        {
-            public OutputType OutputType;
-            public EdmPath ResourcePath = null!;
-            public EdmEntityType? ResourceEdmType;
-            public ODataPath ODataPath = null!;
-        }
-
         /// <summary>
         /// Query model result of the compilation
         /// </summary>
-        public SqlKata.Query Query = new SqlKata.Query();
+        private SqlKata.Query Query;
 
         /// <summary>
         /// List of all aliases used in the From clausole
         /// </summary>
-        public readonly AliasStore Aliases = new AliasStore();
+        private readonly AliasStore Aliases;
+        private OutputKind outputKind;
+        private EdmPath resourcePath = null!;
+        private EdmEntityType? resourceEdmType;
+        private ODataPath oDataPath = null!;
 
-        internal OutputData Output = new OutputData();
 
-
-        internal void SetOutputKind(OutputType OutputType) {
-            Output.OutputType = OutputType;
+        public CompilerContext(ODataPath oDataPath) {
+            this.Aliases = new AliasStore();
+            this.Query =  new SqlKata.Query();
+            this.oDataPath= oDataPath;
         }
 
-        internal OutputType GetOutputKind() => Output.OutputType;
+        internal SqlKata.Query GetQuery() => Query;
+        internal ODataPath GetOdataRequestPath() => oDataPath;
+        internal OutputKind GetOutputKind() => outputKind;
+        internal void SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
+        internal EdmPath GetOutputPath() => resourcePath;
+        internal void SetOutputPath(EdmPath ResourcePath) { resourcePath = ResourcePath; }
+        internal EdmEntityType? GetOutputType() => resourceEdmType;
+        internal void SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
 
-        internal void SetOutputPath(EdmPath ResourcePath) {
-            Output.ResourcePath = ResourcePath;
-        }
-
-        internal EdmPath GetOutputPath() => Output.ResourcePath;
-
-        internal void SetOutputType(EdmEntityType? ResourceEdmType) {
-            Output.ResourceEdmType = ResourceEdmType;
-        }
-
-        internal EdmEntityType? GetOutputType() => Output.ResourceEdmType;
-
+#region "query manipulation"
         internal EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
         {
             var p = Aliases.AddOrGet(edmPath);
@@ -120,6 +78,31 @@ namespace FStorm
         internal void WrapQuery(EdmPath resourcePath)
         {
             throw new NotImplementedException();
+        }
+#endregion
+
+    }
+
+    public enum OutputKind
+    {
+        Collection,
+        Object,
+        Property,
+        RawValue
+    }
+
+    public class AliasStore
+    {
+        private List<EdmPath> Aliases = new List<EdmPath>();
+
+        public string AddOrGet(EdmPath path) {
+            if (!Contains(path))
+                Aliases.Add(path);
+            return path.ToString();
+        }
+
+        public bool Contains(EdmPath path) {
+            return Aliases.Contains(path);
         }
     }
 
