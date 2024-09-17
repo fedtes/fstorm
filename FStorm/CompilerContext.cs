@@ -16,21 +16,30 @@ namespace FStorm
         /// <summary>
         /// List of all aliases used in the From clausole
         /// </summary>
-        private readonly AliasStore Aliases;
+        private AliasStore Aliases;
         private OutputKind outputKind;
         private EdmPath resourcePath = null!;
         private EdmEntityType? resourceEdmType;
-        private ODataPath oDataPath = null!;
+        private ODataPath oDataPath;
+        private FilterClause filter;
 
-
-        public CompilerContext(ODataPath oDataPath) {
+        public CompilerContext(ODataPath oDataPath, FilterClause filter) {
             this.Aliases = new AliasStore();
             this.Query =  new SqlKata.Query();
             this.oDataPath= oDataPath;
+            this.filter = filter;
+        }
+
+        public CompilerContext(ODataPath oDataPath, FilterClause filter, SqlKata.Query query) {
+            this.Aliases = new AliasStore();
+            this.Query =  query;
+            this.oDataPath= oDataPath;
+            this.filter = filter;
         }
 
         internal SqlKata.Query GetQuery() => Query;
         internal ODataPath GetOdataRequestPath() => oDataPath;
+        internal FilterClause GetFilterClause() => filter;
         internal OutputKind GetOutputKind() => outputKind;
         internal void SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
         internal EdmPath GetOutputPath() => resourcePath;
@@ -63,23 +72,103 @@ namespace FStorm
             Query.Select($"{p}.{property.columnName} as {p}/{(customName ?? property.Name)}");
         }
 
+        internal void AddSelectAuto() {
+            if (this.GetOutputKind() == OutputKind.Collection || this.GetOutputKind() == OutputKind.Object || this.GetOutputKind() == OutputKind.Property) {
+                    this.AddSelect(this.GetOutputPath(), this.GetOutputType()!.GetEntityKey(), ":key");
+            }
+
+            if (this.GetOutputKind() == OutputKind.Collection || this.GetOutputKind() == OutputKind.Object)
+            {
+                foreach (var property in this.GetOutputType().DeclaredStructuralProperties())
+                {
+                    this.AddSelect(this.GetOutputPath(), (EdmStructuralProperty)property);
+                }
+            }
+        }
+
         internal void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty)
         {
             var p = Aliases.AddOrGet(edmPath);
             Query.AsCount(new string[] {$"{p}.{edmStructuralProperty.columnName}"});
         }
 
-        internal void AddWhere(EdmResourcePath edmResourcePath, EdmStructuralProperty k, object value)
+        internal void AddFilter(BinaryFilter filter)
         {
-            var p = Aliases.AddOrGet(edmResourcePath);
-            Query.Where($"{p}.{k.columnName}",value);
+            var p = Aliases.AddOrGet(filter.PropertyReference.ResourcePath);
+            switch (filter.OperatorKind)
+            {
+                case BinaryOperatorKind.Or:
+                    throw new NotImplementedException();
+                    break;
+                case BinaryOperatorKind.And:
+                    throw new NotImplementedException();
+                    break;
+                case BinaryOperatorKind.Equal:
+                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}","=", filter.Value);
+                    break;
+                case BinaryOperatorKind.NotEqual:
+                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}","<>", filter.Value);
+                    break;
+                case BinaryOperatorKind.GreaterThan:
+                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}",">", filter.Value);
+                    break;
+                case BinaryOperatorKind.GreaterThanOrEqual:
+                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}",">=", filter.Value);
+                    break;
+                case BinaryOperatorKind.LessThan:
+                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}","<", filter.Value);
+                    break;
+                case BinaryOperatorKind.LessThanOrEqual:
+                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}","<=", filter.Value);
+                    break;
+                case BinaryOperatorKind.Add:
+                    throw new NotImplementedException();
+                    break;
+                case BinaryOperatorKind.Subtract:
+                    throw new NotImplementedException();
+                    break;
+                case BinaryOperatorKind.Multiply:
+                    throw new NotImplementedException();
+                    break;
+                case BinaryOperatorKind.Divide:
+                    throw new NotImplementedException();
+                    break;
+                case BinaryOperatorKind.Modulo:
+                    throw new NotImplementedException();
+                    break;
+                case BinaryOperatorKind.Has:
+                    throw new NotImplementedException();
+                    break;
+            }
         }
 
         internal void WrapQuery(EdmPath resourcePath)
         {
-            throw new NotImplementedException();
+            this.AddSelectAuto();
+            CompilerContext tmpctx = new CompilerContext(this.GetOdataRequestPath(), filter);
+            var p = tmpctx.Aliases.AddOrGet(resourcePath);
+            this.Query = tmpctx.Query.From(this.Query, p);
+            this.Aliases = tmpctx.Aliases;
         }
-#endregion
+
+        // internal CompilerContext GetSubContext()
+        // {
+        //     return new CompilerContext(this.GetOdataRequestPath(), this.GetFilterClause(), new SqlKata.Query());
+        // }
+
+        internal void AddAndFilter()
+        {
+            // this.Query.Where()
+
+            // var subContext = new CompilerContext(this.GetOdataRequestPath(), this.GetFilterClause());
+            // Query.Where(q => {
+            //     subContext.Query = q;
+            //     return q;
+            // });
+            // return subContext;
+        }
+
+        #endregion
 
     }
 

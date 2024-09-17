@@ -41,22 +41,10 @@ namespace FStorm
         public override SQLCompiledQuery ToSQL()
         {
             ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.ResourcePath, UriKind.Relative));
-            var context = new CompilerContext(parser.ParsePath());
+            var context = new CompilerContext(parser.ParsePath(), parser.ParseFilter());
             visitor.VisitPath(context, context.GetOdataRequestPath());
-
-            /* Write output */
-            if (context.GetOutputKind() == OutputKind.Collection || context.GetOutputKind() == OutputKind.Object || context.GetOutputKind() == OutputKind.Property) {
-                    context.AddSelect(context.GetOutputPath(), context.GetOutputType()!.GetEntityKey(), ":key");
-            }
-
-            if (context.GetOutputKind() == OutputKind.Collection || context.GetOutputKind() == OutputKind.Object)
-            {
-                foreach (var property in context.GetOutputType().DeclaredStructuralProperties())
-                {
-                    context.AddSelect(context.GetOutputPath(), (EdmStructuralProperty)property);
-                }
-            }
-
+            visitor.VisitFilterClause(context, context.GetFilterClause());
+            context.AddSelectAuto();
             //context = compiler.AddGet(context, Configuration);
             return Compile(context);
         }

@@ -1,5 +1,6 @@
 using System;
 using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace FStorm;
 
@@ -67,7 +68,15 @@ public class SemanticVisitor
     public void VisitKeySegment(CompilerContext context, Microsoft.OData.UriParser.KeySegment keySegment) 
     {
         var k = (keySegment.NavigationSource.Type.AsElementType() as EdmEntityType)!.GetEntityKey();
-        context.AddWhere(pathFactory.CreateResourcePath(keySegment.NavigationSource.Path.PathSegments.ToArray()), k, keySegment.Keys.First().Value);
+        BinaryFilter filter = new BinaryFilter() {
+            PropertyReference = new PropertyReference() {
+                ResourcePath = pathFactory.CreateResourcePath(keySegment.NavigationSource.Path.PathSegments.ToArray()),
+                Property = k
+            },
+            OperatorKind= BinaryOperatorKind.Equal,
+            Value = keySegment.Keys.First().Value
+        };
+        context.AddFilter(filter);
         context.SetOutputKind(OutputKind.Object);
     }
 
@@ -86,17 +95,127 @@ public class SemanticVisitor
     public void VisitFilterSegment(CompilerContext context, Microsoft.OData.UriParser.FilterSegment filterSegment)
     {
         
-        VisitExpression(context, filterSegment.RangeVariable, filterSegment.Expression);
         context.WrapQuery(context.GetOutputPath());
+        VisitExpression(context, filterSegment.Expression, filterSegment.RangeVariable);
+    }
+
+    public void VisitFilterClause(CompilerContext context, FilterClause filterClause){
+        if (filterClause != null) {
+            VisitExpression(context, filterClause.Expression, filterClause.RangeVariable);
+        }
     }
 
 
-    public void VisitExpression(CompilerContext context,Microsoft.OData.UriParser.RangeVariable variable ,Microsoft.OData.UriParser.SingleValueNode singleValueNode) 
+    public ExpressionValue? VisitExpression(CompilerContext context,Microsoft.OData.UriParser.SingleValueNode singleValueNode, Microsoft.OData.UriParser.RangeVariable? variable = null) 
     {
+        switch (singleValueNode)
+        {
+            case Microsoft.OData.UriParser.BinaryOperatorNode node:
+                return VisitBinaryOperator(context, node);
+            case Microsoft.OData.UriParser.ConstantNode node:
+                return VisitConstantNode(context, node);
+            case Microsoft.OData.UriParser.SingleValuePropertyAccessNode node:
+                return VisitSingleValuePropertyAccessNode(context, node);
+            case Microsoft.OData.UriParser.ResourceRangeVariableReferenceNode node:
+                return VisitResourceRangeVariableReferenceNode(context, node);
+            case Microsoft.OData.UriParser.ConvertNode node:
+                return VisitExpression(context, node.Source, variable);
+            default:
+                throw new NotImplementedException();
+        }
+    }
+
+    public ExpressionValue? VisitBinaryOperator(CompilerContext context, BinaryOperatorNode node)
+    {
+        if (node.OperatorKind == BinaryOperatorKind.And) {
+            VisitExpression(context, node.Left);
+            VisitExpression(context, node.Right);
+        } else if (node.OperatorKind == BinaryOperatorKind.Or) {
+
+        } else {
+            BinaryFilter filter = new BinaryFilter() {
+                PropertyReference = (PropertyReference)VisitExpression(context, node.Left),
+                OperatorKind = node.OperatorKind,
+                Value = (VisitExpression(context, node.Right) as ConstantValue).Value
+            };
+            context.AddFilter(filter);
+        }
+        return new ExpressionValue();
+    }
+
+    public ExpressionValue? VisitSingleValuePropertyAccessNode(CompilerContext context, Microsoft.OData.UriParser.SingleValuePropertyAccessNode node) {
+        //throw new NotImplementedException();
+        return new PropertyReference() {
+            Property = (EdmStructuralProperty)node.Property,
+            ResourcePath = (VisitExpression(context, node.Source) as Variable).ResourcePath
+        };
+    }
+
+    public ExpressionValue? VisitConstantNode(CompilerContext context, Microsoft.OData.UriParser.ConstantNode node) {
+        return new ConstantValue() { Value = node.Value} ;
+    }
+    public void VisitConvertNode(CompilerContext context, Microsoft.OData.UriParser.ConvertNode node) {
         throw new NotImplementedException();
     }
+    public void VisitLambdaNode(CompilerContext context, Microsoft.OData.UriParser.LambdaNode node) {
+        throw new NotImplementedException();
+    }
+    public void VisitParameterAliasNode(CompilerContext context, Microsoft.OData.UriParser.ParameterAliasNode node) {
+        throw new NotImplementedException();
+    }
+    public void VisitSearchTermNode(CompilerContext context, Microsoft.OData.UriParser.SearchTermNode node) {
+        throw new NotImplementedException();
+    }
+    public void VisitSingleEntityNode(CompilerContext context, Microsoft.OData.UriParser.SingleEntityNode node) {
+        throw new NotImplementedException();
+    }
+    public void VisitSingleValueCastNode(CompilerContext context, Microsoft.OData.UriParser.SingleValueCastNode node) {
+        throw new NotImplementedException();
+    }
+    public void VisitSingleValueFunctionCallNode(CompilerContext context, Microsoft.OData.UriParser.SingleValueFunctionCallNode node) {
+        throw new NotImplementedException();
+    }
+    public void VisitSingleValueOpenPropertyAccessNode(CompilerContext context, Microsoft.OData.UriParser.SingleValueOpenPropertyAccessNode node) {
+        throw new NotImplementedException();
+    }
+
+    public void VisitUnaryOperatorNode(CompilerContext context, Microsoft.OData.UriParser.UnaryOperatorNode node) {
+        throw new NotImplementedException();
+    }
+
+    // public ExpressionValue? VisitSingleResourceNode(CompilerContext context, Microsoft.OData.UriParser.SingleValueNode node) {
+    //     return node switch {
+    //         Microsoft.OData.UriParser.ResourceRangeVariableReferenceNode n => VisitResourceRangeVariableReferenceNode(context, n),
+    //         _ => throw new NotImplementedException()
+    //     };
+    // }
+
+    private ExpressionValue? VisitResourceRangeVariableReferenceNode(CompilerContext context, ResourceRangeVariableReferenceNode node)
+    {
+        return new Variable() {
+            ResourcePath = pathFactory.CreateResourcePath(node.RangeVariable.NavigationSource.Path.PathSegments.ToArray()),
+            Type = (EdmEntityType)node.RangeVariable.StructuredTypeReference.Definition.AsElementType(),
+            Name = node.RangeVariable.Name
+        };
+    }
+
+
     /* 
-    
+    Microsoft.OData.Core.UriParser.Semantic.BinaryOperatorNode
+            Microsoft.OData.Core.UriParser.Semantic.ConstantNode
+            Microsoft.OData.Core.UriParser.Semantic.ConvertNode
+            Microsoft.OData.Core.UriParser.Semantic.LambdaNode
+            Microsoft.OData.Core.UriParser.Semantic.NonentityRangeVariableReferenceNode
+            Microsoft.OData.Core.UriParser.Semantic.ParameterAliasNode
+            Microsoft.OData.Core.UriParser.Semantic.SearchTermNode
+            Microsoft.OData.Core.UriParser.Semantic.SingleEntityNode
+            Microsoft.OData.Core.UriParser.Semantic.SingleValueCastNode
+            Microsoft.OData.Core.UriParser.Semantic.SingleValueFunctionCallNode
+            Microsoft.OData.Core.UriParser.Semantic.SingleValueOpenPropertyAccessNode
+            Microsoft.OData.Core.UriParser.Semantic.SingleValuePropertyAccessNode
+            Microsoft.OData.Core.UriParser.Semantic.UnaryOperatorNode
+
+
     Microsoft.OData.Core.UriParser.Semantic.ODataPath:
       derived:
         Microsoft.OData.Core.UriParser.Semantic.ODataExpandPath
@@ -141,4 +260,50 @@ public class SemanticVisitor
             Microsoft.OData.Core.UriParser.Semantic.SingleValuePropertyAccessNode
             Microsoft.OData.Core.UriParser.Semantic.UnaryOperatorNode
     */
+}
+
+
+public class ExpressionValue
+{
+
+}
+
+public class ConstantValue : ExpressionValue
+{
+    public object? Value {get; set;}
+}
+
+public class PropertyReference : ExpressionValue
+{
+    public EdmResourcePath ResourcePath {get; set;} = null!;
+
+    public EdmStructuralProperty Property {get; set;} = null!;
+}
+
+public class Variable : ExpressionValue
+{
+    public EdmResourcePath ResourcePath {get; set;} = null!;
+
+    public EdmEntityType Type {get; set;} = null!;
+
+    public String Name {get; set;} = null!;
+}
+
+
+public class Filter : ExpressionValue
+{
+
+}
+
+
+public class BinaryFilter : Filter
+{
+    public PropertyReference PropertyReference {get; set;} = null!;
+    public BinaryOperatorKind OperatorKind = BinaryOperatorKind.Equal;
+    public object Value = null!;
+}
+
+public class AndFilter : Filter
+{
+    public List<Filter> Filters {get; set;} = new List<Filter>();
 }
