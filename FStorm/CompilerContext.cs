@@ -1,5 +1,6 @@
 ﻿using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
+using System.Collections.Generic;
 
 namespace FStorm
 {
@@ -11,7 +12,10 @@ namespace FStorm
         /// <summary>
         /// Query model result of the compilation
         /// </summary>
-        private SqlKata.Query Query;
+        private Stack<CompilerScope> scope = new Stack<CompilerScope>();
+        private SqlKata.Query MainQuery { get => scope.First(x => x.ScopeType == CompilerScope.MAIN).Query; }
+        private SqlKata.Query Query { get => scope.Peek().Query;}
+        private bool IsOr {get => scope.Peek().ScopeType == CompilerScope.OR;}
 
         /// <summary>
         /// List of all aliases used in the From clausole
@@ -25,18 +29,22 @@ namespace FStorm
 
         public CompilerContext(ODataPath oDataPath, FilterClause filter) {
             this.Aliases = new AliasStore();
-            this.Query =  new SqlKata.Query();
             this.oDataPath= oDataPath;
             this.filter = filter;
+            SetMainQuery(new SqlKata.Query());
         }
 
         public CompilerContext(ODataPath oDataPath, FilterClause filter, SqlKata.Query query) {
             this.Aliases = new AliasStore();
-            this.Query =  query;
             this.oDataPath= oDataPath;
             this.filter = filter;
+            SetMainQuery(query);
         }
 
+        private void SetMainQuery(SqlKata.Query query) {
+            scope.Clear();
+            scope.Push(new CompilerScope(CompilerScope.MAIN, query));
+        }
         internal SqlKata.Query GetQuery() => Query;
         internal ODataPath GetOdataRequestPath() => oDataPath;
         internal FilterClause GetFilterClause() => filter;
@@ -47,11 +55,45 @@ namespace FStorm
         internal EdmEntityType? GetOutputType() => resourceEdmType;
         internal void SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
 
+        internal bool OpenAndScope() {
+            if (scope.Peek().ScopeType != CompilerScope.AND)
+            {
+                scope.Push(new CompilerScope(CompilerScope.AND,new SqlKata.Query()));
+                return true;
+            }
+            return false;
+        }
+
+        internal void CloseAndScope(bool doClose) {
+            if (scope.Peek().ScopeType == CompilerScope.AND && doClose)
+            {
+                var s = scope.Pop();
+                Query.Where(_q => s.Query);
+            }
+        }
+
+        internal bool OpenOrScope() {
+            if (scope.Peek().ScopeType != CompilerScope.OR)
+            {
+                scope.Push(new CompilerScope(CompilerScope.OR,new SqlKata.Query()));
+                return true;
+            }
+            return false;
+        }
+
+        internal void CloseOrScope(bool doClose) {
+            if (scope.Peek().ScopeType == CompilerScope.OR && doClose)
+            {
+                var s = scope.Pop();
+                Query.OrWhere(_q => s.Query);
+            }
+        }
+
 #region "query manipulation"
         internal EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
         {
             var p = Aliases.AddOrGet(edmPath);
-            Query.From(edmEntityType.Table + " as " + p.ToString());
+            this.MainQuery.From(edmEntityType.Table + " as " + p.ToString());
             return edmPath;
         }
 
@@ -62,7 +104,7 @@ namespace FStorm
             var constraint = rightNavigationProperty.ReferentialConstraint.PropertyPairs.First();
             var sourceProperty = (EdmStructuralProperty)constraint.PrincipalProperty;
             var targetProperty = (EdmStructuralProperty)constraint.DependentProperty;
-            Query.Join((rightNavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!.Table + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+            this.MainQuery.Join((rightNavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!.Table + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
             return leftPath;
         }
 
@@ -104,22 +146,22 @@ namespace FStorm
                     throw new NotImplementedException();
                     break;
                 case BinaryOperatorKind.Equal:
-                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}","=", filter.Value);
+                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}","=", filter.Value);
                     break;
                 case BinaryOperatorKind.NotEqual:
-                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}","<>", filter.Value);
+                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}","<>", filter.Value);
                     break;
                 case BinaryOperatorKind.GreaterThan:
-                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}",">", filter.Value);
+                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}",">", filter.Value);
                     break;
                 case BinaryOperatorKind.GreaterThanOrEqual:
-                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}",">=", filter.Value);
+                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}",">=", filter.Value);
                     break;
                 case BinaryOperatorKind.LessThan:
-                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}","<", filter.Value);
+                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}","<", filter.Value);
                     break;
                 case BinaryOperatorKind.LessThanOrEqual:
-                    Query.Where($"{p}.{filter.PropertyReference.Property.columnName}","<=", filter.Value);
+                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}","<=", filter.Value);
                     break;
                 case BinaryOperatorKind.Add:
                     throw new NotImplementedException();
@@ -144,28 +186,15 @@ namespace FStorm
 
         internal void WrapQuery(EdmPath resourcePath)
         {
+            if (scope.Count > 1 || scope.Peek().ScopeType != CompilerScope.MAIN) {
+                throw new Exception("Cannot wrap query while a sub compiler scope is open or the current scopo is not the main");
+            }
+
             this.AddSelectAuto();
             CompilerContext tmpctx = new CompilerContext(this.GetOdataRequestPath(), filter);
             var p = tmpctx.Aliases.AddOrGet(resourcePath);
-            this.Query = tmpctx.Query.From(this.Query, p);
+            SetMainQuery(tmpctx.Query.From(this.Query, p));
             this.Aliases = tmpctx.Aliases;
-        }
-
-        // internal CompilerContext GetSubContext()
-        // {
-        //     return new CompilerContext(this.GetOdataRequestPath(), this.GetFilterClause(), new SqlKata.Query());
-        // }
-
-        internal void AddAndFilter()
-        {
-            // this.Query.Where()
-
-            // var subContext = new CompilerContext(this.GetOdataRequestPath(), this.GetFilterClause());
-            // Query.Where(q => {
-            //     subContext.Query = q;
-            //     return q;
-            // });
-            // return subContext;
         }
 
         #endregion
@@ -192,6 +221,26 @@ namespace FStorm
 
         public bool Contains(EdmPath path) {
             return Aliases.Contains(path);
+        }
+    }
+
+    public class CompilerScope
+    {
+        public const string MAIN = "main";
+        public const string AND = "and";
+        public const string OR = "or";
+        public readonly SqlKata.Query Query;
+
+        public readonly string ScopeType;
+
+        internal CompilerScope(string scopeType, SqlKata.Query query){
+            ScopeType = scopeType;
+            Query = query;
+        }
+
+        public override string ToString()
+        {
+            return ScopeType;
         }
     }
 

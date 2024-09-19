@@ -12,28 +12,28 @@ public class SemanticVisitor
         this.pathFactory = pathFactory;
     }
 
-    public void VisitPath(CompilerContext context, Microsoft.OData.UriParser.ODataPath oDataPath) 
+    public void VisitPath(CompilerContext context, ODataPath oDataPath) 
     {
         for (int i = 0; i < oDataPath.Count; i++)
         {
             switch (oDataPath[i])
             {
-                case Microsoft.OData.UriParser.EntitySetSegment segment:
+                case EntitySetSegment segment:
                     VisitEntitySetSegment(context, segment);
                     break;
-                case Microsoft.OData.UriParser.NavigationPropertySegment segment:
+                case NavigationPropertySegment segment:
                     VisitNavigationPropertySegment(context, segment);
                     break;
-                case Microsoft.OData.UriParser.KeySegment segment:
+                case KeySegment segment:
                     VisitKeySegment(context, segment);
                     break;
-                case Microsoft.OData.UriParser.PropertySegment segment:
+                case PropertySegment segment:
                     VisitPropertySegment(context, segment);
                     break;
-                case Microsoft.OData.UriParser.CountSegment segment:
+                case CountSegment segment:
                     VisitCountSegment(context, segment);
                     break;
-                case Microsoft.OData.UriParser.FilterSegment segment:
+                case FilterSegment segment:
                     VisitFilterSegment(context, segment);
                     break;
                 default:
@@ -43,7 +43,7 @@ public class SemanticVisitor
 
     }
 
-    public void VisitEntitySetSegment(CompilerContext context, Microsoft.OData.UriParser.EntitySetSegment entitySetSegment) 
+    public void VisitEntitySetSegment(CompilerContext context, EntitySetSegment entitySetSegment) 
     {
         EdmPath alias = context.AddFrom((EdmEntityType)entitySetSegment.EdmType.AsElementType(), pathFactory.Parse(EdmPath.PATH_ROOT + "/" + entitySetSegment.Identifier));
         context.SetOutputKind(OutputKind.Collection);
@@ -51,7 +51,7 @@ public class SemanticVisitor
         context.SetOutputPath(alias);
     }
 
-    public void VisitNavigationPropertySegment(CompilerContext context, Microsoft.OData.UriParser.NavigationPropertySegment navigationPropertySegment) 
+    public void VisitNavigationPropertySegment(CompilerContext context, NavigationPropertySegment navigationPropertySegment) 
     {
 
         EdmPath alias = context.AddJoin(
@@ -65,7 +65,7 @@ public class SemanticVisitor
         context.SetOutputPath(alias);
     }
 
-    public void VisitKeySegment(CompilerContext context, Microsoft.OData.UriParser.KeySegment keySegment) 
+    public void VisitKeySegment(CompilerContext context, KeySegment keySegment) 
     {
         var k = (keySegment.NavigationSource.Type.AsElementType() as EdmEntityType)!.GetEntityKey();
         BinaryFilter filter = new BinaryFilter() {
@@ -80,19 +80,19 @@ public class SemanticVisitor
         context.SetOutputKind(OutputKind.Object);
     }
 
-    public void VisitPropertySegment(CompilerContext context, Microsoft.OData.UriParser.PropertySegment propertySegment) 
+    public void VisitPropertySegment(CompilerContext context, PropertySegment propertySegment) 
     {
         context.AddSelect(context.GetOutputPath() , (EdmStructuralProperty)propertySegment.Property);
         context.SetOutputKind(OutputKind.Property);
     }
 
-    public void VisitCountSegment(CompilerContext context, Microsoft.OData.UriParser.CountSegment countSegment) 
+    public void VisitCountSegment(CompilerContext context, CountSegment countSegment) 
     {
         context.AddCount(context.GetOutputPath(), context.GetOutputType()!.GetEntityKey());
         context.SetOutputKind(OutputKind.RawValue);
     }
 
-    public void VisitFilterSegment(CompilerContext context, Microsoft.OData.UriParser.FilterSegment filterSegment)
+    public void VisitFilterSegment(CompilerContext context, FilterSegment filterSegment)
     {
         
         context.WrapQuery(context.GetOutputPath());
@@ -106,19 +106,19 @@ public class SemanticVisitor
     }
 
 
-    public ExpressionValue? VisitExpression(CompilerContext context,Microsoft.OData.UriParser.SingleValueNode singleValueNode, Microsoft.OData.UriParser.RangeVariable? variable = null) 
+    public ExpressionValue? VisitExpression(CompilerContext context, SingleValueNode singleValueNode, RangeVariable? variable = null) 
     {
         switch (singleValueNode)
         {
-            case Microsoft.OData.UriParser.BinaryOperatorNode node:
+            case BinaryOperatorNode node:
                 return VisitBinaryOperator(context, node);
-            case Microsoft.OData.UriParser.ConstantNode node:
+            case ConstantNode node:
                 return VisitConstantNode(context, node);
-            case Microsoft.OData.UriParser.SingleValuePropertyAccessNode node:
+            case SingleValuePropertyAccessNode node:
                 return VisitSingleValuePropertyAccessNode(context, node);
-            case Microsoft.OData.UriParser.ResourceRangeVariableReferenceNode node:
+            case ResourceRangeVariableReferenceNode node:
                 return VisitResourceRangeVariableReferenceNode(context, node);
-            case Microsoft.OData.UriParser.ConvertNode node:
+            case ConvertNode node:
                 return VisitExpression(context, node.Source, variable);
             default:
                 throw new NotImplementedException();
@@ -127,12 +127,22 @@ public class SemanticVisitor
 
     public ExpressionValue? VisitBinaryOperator(CompilerContext context, BinaryOperatorNode node)
     {
-        if (node.OperatorKind == BinaryOperatorKind.And) {
+        if (node.OperatorKind == BinaryOperatorKind.And) 
+        {
+            var s = context.OpenAndScope();
             VisitExpression(context, node.Left);
             VisitExpression(context, node.Right);
-        } else if (node.OperatorKind == BinaryOperatorKind.Or) {
-
-        } else {
+            context.CloseAndScope(s);
+        } 
+        else if (node.OperatorKind == BinaryOperatorKind.Or) 
+        {
+            var s = context.OpenOrScope();
+            VisitExpression(context, node.Left);
+            VisitExpression(context, node.Right);
+            context.CloseOrScope(s);
+        } 
+        else 
+        {
             BinaryFilter filter = new BinaryFilter() {
                 PropertyReference = (PropertyReference)VisitExpression(context, node.Left),
                 OperatorKind = node.OperatorKind,
@@ -143,7 +153,7 @@ public class SemanticVisitor
         return new ExpressionValue();
     }
 
-    public ExpressionValue? VisitSingleValuePropertyAccessNode(CompilerContext context, Microsoft.OData.UriParser.SingleValuePropertyAccessNode node) {
+    public ExpressionValue? VisitSingleValuePropertyAccessNode(CompilerContext context, SingleValuePropertyAccessNode node) {
         //throw new NotImplementedException();
         return new PropertyReference() {
             Property = (EdmStructuralProperty)node.Property,
@@ -151,35 +161,35 @@ public class SemanticVisitor
         };
     }
 
-    public ExpressionValue? VisitConstantNode(CompilerContext context, Microsoft.OData.UriParser.ConstantNode node) {
+    public ExpressionValue? VisitConstantNode(CompilerContext context, ConstantNode node) {
         return new ConstantValue() { Value = node.Value} ;
     }
-    public void VisitConvertNode(CompilerContext context, Microsoft.OData.UriParser.ConvertNode node) {
+    public void VisitConvertNode(CompilerContext context, ConvertNode node) {
         throw new NotImplementedException();
     }
-    public void VisitLambdaNode(CompilerContext context, Microsoft.OData.UriParser.LambdaNode node) {
+    public void VisitLambdaNode(CompilerContext context, LambdaNode node) {
         throw new NotImplementedException();
     }
-    public void VisitParameterAliasNode(CompilerContext context, Microsoft.OData.UriParser.ParameterAliasNode node) {
+    public void VisitParameterAliasNode(CompilerContext context, ParameterAliasNode node) {
         throw new NotImplementedException();
     }
-    public void VisitSearchTermNode(CompilerContext context, Microsoft.OData.UriParser.SearchTermNode node) {
+    public void VisitSearchTermNode(CompilerContext context, SearchTermNode node) {
         throw new NotImplementedException();
     }
-    public void VisitSingleEntityNode(CompilerContext context, Microsoft.OData.UriParser.SingleEntityNode node) {
+    public void VisitSingleEntityNode(CompilerContext context, SingleEntityNode node) {
         throw new NotImplementedException();
     }
-    public void VisitSingleValueCastNode(CompilerContext context, Microsoft.OData.UriParser.SingleValueCastNode node) {
+    public void VisitSingleValueCastNode(CompilerContext context, SingleValueCastNode node) {
         throw new NotImplementedException();
     }
-    public void VisitSingleValueFunctionCallNode(CompilerContext context, Microsoft.OData.UriParser.SingleValueFunctionCallNode node) {
+    public void VisitSingleValueFunctionCallNode(CompilerContext context, SingleValueFunctionCallNode node) {
         throw new NotImplementedException();
     }
-    public void VisitSingleValueOpenPropertyAccessNode(CompilerContext context, Microsoft.OData.UriParser.SingleValueOpenPropertyAccessNode node) {
+    public void VisitSingleValueOpenPropertyAccessNode(CompilerContext context, SingleValueOpenPropertyAccessNode node) {
         throw new NotImplementedException();
     }
 
-    public void VisitUnaryOperatorNode(CompilerContext context, Microsoft.OData.UriParser.UnaryOperatorNode node) {
+    public void VisitUnaryOperatorNode(CompilerContext context, UnaryOperatorNode node) {
         throw new NotImplementedException();
     }
 
