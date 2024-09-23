@@ -13,6 +13,7 @@ namespace FStorm.Test
             EdmEntityType customerType = edm.AddEntityType("my", "Customer", "TABCustomers");
             EdmStructuralProperty customerKey = customerType.AddStructuralProperty("ID", EdmPrimitiveTypeKind.Int32, false, "CustomerID");
             EdmStructuralProperty ragSoc = customerType.AddStructuralProperty("RagSoc", EdmPrimitiveTypeKind.String, false);
+            EdmStructuralProperty addressId = customerType.AddStructuralProperty("AddressID", EdmPrimitiveTypeKind.Int32, true);
             customerType.AddKey(customerKey);
 
             //Order
@@ -24,8 +25,18 @@ namespace FStorm.Test
             EdmStructuralProperty orderCustomerId = orderType.AddStructuralProperty("CustomerID", EdmPrimitiveTypeKind.Int32, false);
             orderType.AddKey(orderKey);
 
+            //Address
+            EdmEntityType addressType = edm.AddEntityType("my", "Address", "TABAddresses");
+            var addressKey = addressType.AddStructuralProperty("AddressID", EdmPrimitiveTypeKind.Int32, false);
+            addressType.AddStructuralProperty("City", EdmPrimitiveTypeKind.String, true);
+            addressType.AddStructuralProperty("Street", EdmPrimitiveTypeKind.String, true);
+            addressType.AddStructuralProperty("Number", EdmPrimitiveTypeKind.Int32, true);
+            addressType.AddStructuralProperty("Country", EdmPrimitiveTypeKind.String, true);
+            addressType.AddKey(addressKey);
+
             //Entity-Relations
             customerType.AddNavigationProperty("Orders", orderType, EdmMultiplicity.Many, customerKey, orderCustomerId);
+            customerType.AddNavigationProperty("Address", addressType, EdmMultiplicity.One, addressId, addressKey);
             orderType.AddNavigationProperty("Customer", customerType, EdmMultiplicity.One, orderCustomerId, customerKey);
 
             //EntitySet

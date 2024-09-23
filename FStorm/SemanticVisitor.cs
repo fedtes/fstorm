@@ -116,6 +116,8 @@ public class SemanticVisitor
                 return VisitConstantNode(context, node);
             case SingleValuePropertyAccessNode node:
                 return VisitSingleValuePropertyAccessNode(context, node);
+            case SingleNavigationNode node:
+                return VisitSingleNavigationNode(context, node);
             case ResourceRangeVariableReferenceNode node:
                 return VisitResourceRangeVariableReferenceNode(context, node);
             case ConvertNode node:
@@ -125,21 +127,23 @@ public class SemanticVisitor
         }
     }
 
+    
+
     public ExpressionValue? VisitBinaryOperator(CompilerContext context, BinaryOperatorNode node)
     {
         if (node.OperatorKind == BinaryOperatorKind.And) 
         {
-            var s = context.OpenAndScope();
+            context.OpenAndScope();
             VisitExpression(context, node.Left);
             VisitExpression(context, node.Right);
-            context.CloseAndScope(s);
+            context.CloseAndScope();
         } 
         else if (node.OperatorKind == BinaryOperatorKind.Or) 
         {
-            var s = context.OpenOrScope();
+            context.OpenOrScope();
             VisitExpression(context, node.Left);
             VisitExpression(context, node.Right);
-            context.CloseOrScope(s);
+            context.CloseOrScope();
         } 
         else 
         {
@@ -154,11 +158,53 @@ public class SemanticVisitor
     }
 
     public ExpressionValue? VisitSingleValuePropertyAccessNode(CompilerContext context, SingleValuePropertyAccessNode node) {
-        //throw new NotImplementedException();
         return new PropertyReference() {
             Property = (EdmStructuralProperty)node.Property,
             ResourcePath = (VisitExpression(context, node.Source) as Variable).ResourcePath
         };
+    }
+
+    private Variable VisitSingleNavigationNode(CompilerContext context, SingleNavigationNode node)
+    {
+        if (node.NavigationSource is IEdmContainedEntitySet)
+        {
+            List<(IEdmNavigationSource,string)> segments = new List<(IEdmNavigationSource,string)>();
+            IEdmContainedEntitySet source =(IEdmContainedEntitySet)node.NavigationSource;
+            segments.Add((source, source.Name));
+            IEdmNavigationSource parent = source.ParentNavigationSource;
+
+            while (parent is IEdmContainedEntitySet)
+            {
+                var x = (IEdmContainedEntitySet)parent;
+                segments.Insert(0, (x, x.Name));
+                parent = x.ParentNavigationSource;
+            }
+            segments.Insert(0,(parent, parent.Name));
+
+            for (int i = 0; i < segments.Count; i++)
+            {
+                if (segments[i].Item1 is IEdmContainedEntitySet)
+                {
+                    List<string> s = new List<string>();
+                    for (int j = 0; j <= i; j++)
+                    {
+                        s.Add(segments[j].Item2);
+                    }
+                    context.AddJoin((EdmNavigationProperty)(segments[i].Item1 as IEdmContainedEntitySet).NavigationProperty,
+                        pathFactory.CreateResourcePath(s.ToArray()) - 1,
+                        pathFactory.CreateResourcePath(s.ToArray())
+                    );
+                }
+            }
+
+            return new Variable() {
+                Name= source.Name,
+                Type = (EdmEntityType)source.EntityType.AsElementType(),
+                ResourcePath = pathFactory.CreateResourcePath(segments.Select(x => x.Item2).ToArray())
+            };
+        }
+
+        throw new InvalidOperationException("Unexpected NavigationSource type.");
     }
 
     public ExpressionValue? VisitConstantNode(CompilerContext context, ConstantNode node) {

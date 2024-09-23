@@ -1,6 +1,7 @@
 ﻿using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
 
 namespace FStorm
 {
@@ -13,9 +14,10 @@ namespace FStorm
         /// Query model result of the compilation
         /// </summary>
         private Stack<CompilerScope> scope = new Stack<CompilerScope>();
+        private CompilerScope ActiveScope {get => scope.First(x => x.ScopeType != CompilerScope.NO_SCOPE); }
         private SqlKata.Query MainQuery { get => scope.First(x => x.ScopeType == CompilerScope.MAIN).Query; }
-        private SqlKata.Query Query { get => scope.Peek().Query;}
-        private bool IsOr {get => scope.Peek().ScopeType == CompilerScope.OR;}
+        private SqlKata.Query Query { get => ActiveScope.Query;}
+        private bool IsOr {get => ActiveScope.ScopeType == CompilerScope.OR;}
 
         /// <summary>
         /// List of all aliases used in the From clausole
@@ -55,37 +57,48 @@ namespace FStorm
         internal EdmEntityType? GetOutputType() => resourceEdmType;
         internal void SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
 
-        internal bool OpenAndScope() {
-            if (scope.Peek().ScopeType != CompilerScope.AND)
+        internal void OpenAndScope() {
+            if (ActiveScope.ScopeType != CompilerScope.AND)
             {
                 scope.Push(new CompilerScope(CompilerScope.AND,new SqlKata.Query()));
-                return true;
             }
-            return false;
+            else {
+                scope.Push(new CompilerScope(CompilerScope.NO_SCOPE, Query));
+            }
         }
 
-        internal void CloseAndScope(bool doClose) {
-            if (scope.Peek().ScopeType == CompilerScope.AND && doClose)
+        internal void CloseAndScope() {
+            if (scope.Peek().ScopeType == CompilerScope.AND)
             {
                 var s = scope.Pop();
-                Query.Where(_q => s.Query);
+                (IsOr ? Query.Or() : Query).Where(_q => s.Query);
+            }
+            else 
+            {
+                scope.Pop();
             }
         }
 
-        internal bool OpenOrScope() {
-            if (scope.Peek().ScopeType != CompilerScope.OR)
+        internal void OpenOrScope() {
+            if (ActiveScope.ScopeType != CompilerScope.OR)
             {
                 scope.Push(new CompilerScope(CompilerScope.OR,new SqlKata.Query()));
-                return true;
             }
-            return false;
+            else 
+            {
+                scope.Push(new CompilerScope(CompilerScope.NO_SCOPE, Query));
+            }
         }
 
-        internal void CloseOrScope(bool doClose) {
-            if (scope.Peek().ScopeType == CompilerScope.OR && doClose)
+        internal void CloseOrScope() {
+            if (scope.Peek().ScopeType == CompilerScope.OR)
             {
                 var s = scope.Pop();
-                Query.OrWhere(_q => s.Query);
+                (IsOr ? Query.Or() : Query).Where(_q => s.Query);
+            }
+            else 
+            {
+                scope.Pop();
             }
         }
 
@@ -99,6 +112,7 @@ namespace FStorm
 
         internal EdmPath AddJoin(EdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath)
         {
+            if (Aliases.Contains(leftPath)) return leftPath;
             var r = Aliases.AddOrGet(rightPath);
             var l = Aliases.AddOrGet(leftPath);
             var constraint = rightNavigationProperty.ReferentialConstraint.PropertyPairs.First();
@@ -229,6 +243,7 @@ namespace FStorm
         public const string MAIN = "main";
         public const string AND = "and";
         public const string OR = "or";
+        public const string NO_SCOPE = "noscope";
         public readonly SqlKata.Query Query;
 
         public readonly string ScopeType;
