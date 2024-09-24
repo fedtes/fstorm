@@ -48,7 +48,7 @@ namespace FStorm.Test
 
             var w = serviceProvider.GetService<Writer>()!;
             var sr = w.WriteResult(r);
-            Assert.That(sr.ToString(), Is.EqualTo("{\"@odata.context\":\"https://my.service/odata/$metadata#Customers\",\"value\":[{\"ID\":1,\"RagSoc\":\"ACME\"},{\"ID\":2,\"RagSoc\":\"ECorp\"},{\"ID\":3,\"RagSoc\":\"DreamSolutions\"}]}"));
+            Assert.That(sr.ToString(), Is.EqualTo("{\"@odata.context\":\"https://my.service/odata/$metadata#Customers\",\"value\":[{\"ID\":1,\"RagSoc\":\"ACME\",\"AddressID\":null},{\"ID\":2,\"RagSoc\":\"ECorp\",\"AddressID\":null},{\"ID\":3,\"RagSoc\":\"DreamSolutions\",\"AddressID\":null}]}"));
         }
 
         [Test]
@@ -61,7 +61,7 @@ namespace FStorm.Test
 
             var w = serviceProvider.GetService<Writer>()!;
             var sr = w.WriteResult(r);
-            Assert.That(sr.ToString(), Is.EqualTo("{\"@odata.context\":\"https://my.service/odata/$metadata#Customers/$entity\",\"ID\":1,\"RagSoc\":\"ACME\"}"));
+            Assert.That(sr.ToString(), Is.EqualTo("{\"@odata.context\":\"https://my.service/odata/$metadata#Customers/$entity\",\"ID\":1,\"RagSoc\":\"ACME\",\"AddressID\":null}"));
         }
 
         [Test]

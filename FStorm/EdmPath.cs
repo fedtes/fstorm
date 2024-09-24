@@ -17,7 +17,7 @@ namespace FStorm
         public override string ToString() => Identifier;
     }
 
-    public abstract class EdmPath : IEnumerable<EdmSegment>
+    public class EdmPath : IEnumerable<EdmSegment>
     {
 
         public const string PATH_ROOT = "~";
@@ -84,48 +84,9 @@ namespace FStorm
 
         public override int GetHashCode() => ToString().GetHashCode();
 #endregion
-        public abstract EdmPrimitiveTypeKind GetTypeKind();
-        public abstract bool IsPathToKey();
-        public abstract EdmPath Clone();
-        public override string ToString() => String.Join("/", _segments.Select(x => x.ToString()));
-    }
 
-    public class EdmResourcePath : EdmPath
-    {
-        internal EdmResourcePath(FStormService fStormService) : base(fStormService) { }
-        internal EdmResourcePath(FStormService fStormService, params string[] segments) : base(fStormService,segments) { }
 
-        internal EdmResourcePath(FStormService fStormService, params EdmSegment[] segments) : base(fStormService,segments) { }
-
-        public override EdmPath Clone() => new EdmResourcePath(fStormService, this._segments.ToArray());
-
-        public override string ToString() =>  EdmPath.PATH_ROOT + "/" + base.ToString();
-
-        public override bool IsPathToKey() => _segments.Last().Identifier == ":key";
-
-        private EdmEntityType GetContainerType()
-        {
-            EdmEntityType? entityType = null;
-            for (int i = 0; i < this.Count()-1; i++)
-            {
-                if (i == 0)
-                {
-                    var ns = fStormService.Model.DeclaredNamespaces.First();
-                    entityType = (EdmEntityType?)fStormService.Model.FindDeclaredEntitySet(_segments[i].ToString()).Type.AsElementType();
-                }
-                else
-                {
-                    var navProp = entityType.DeclaredNavigationProperties().First(x => x.Name == _segments[i].ToString());
-                    entityType = (EdmEntityType?)navProp.Type.ToStructuredType()!;
-                }
-            }
-            if (entityType == null)
-                throw new InvalidOperationException($"Path {this.ToString()} do not refers to any valid EntityType.");
-            else
-                return entityType;
-        }
-
-        public override EdmPrimitiveTypeKind GetTypeKind()
+        public EdmPrimitiveTypeKind GetTypeKind()
         {
             if (IsPathToKey()) {
                 EdmEntityType entityType = GetContainerType();
@@ -156,6 +117,62 @@ namespace FStorm
             }
             
         }
+
+        public EdmEntityType GetContainerType()
+        {
+            EdmEntityType? entityType = null;
+            for (int i = 0; i < this.Count()-1; i++)
+            {
+                if (i == 0)
+                {
+                    var ns = fStormService.Model.DeclaredNamespaces.First();
+                    entityType = (EdmEntityType?)fStormService.Model.FindDeclaredEntitySet(_segments[i].ToString()).Type.AsElementType();
+                }
+                else
+                {
+                    var navProp = entityType.DeclaredNavigationProperties().First(x => x.Name == _segments[i].ToString());
+                    entityType = (EdmEntityType?)navProp.Type.ToStructuredType()!;
+                }
+            }
+            if (entityType == null)
+                throw new InvalidOperationException($"Path {this.ToString()} do not refers to any valid EntityType.");
+            else
+                return entityType;
+        }
+
+        public List<(EdmSegment, IEdmElement)> GetEdmElements()
+        {
+            List<(EdmSegment, IEdmElement)> result =new List<(EdmSegment, IEdmElement)>();
+            for (int i = 0; i < this.Count(); i++)
+            {
+                if (i == 0)
+                {
+                    var ns = fStormService.Model.DeclaredNamespaces.First();
+                    result.Add((_segments[i], fStormService.Model.FindDeclaredEntitySet(_segments[i].ToString())));
+                }
+                else if (result.Last().Item2 is IEdmEntitySet)
+                {
+                    var _last = (IEdmEntitySet)result.Last().Item2;
+                    var _prop = (_last.EntityType.AsElementType() as EdmEntityType)!.DeclaredProperties.First(x => x.Name == _segments[i].ToString());
+                    result.Add((_segments[i], _prop));
+                }
+                else if (result.Last().Item2 is IEdmNavigationProperty) {
+                    var _last = (IEdmNavigationProperty)result.Last().Item2;
+                    var _prop = (_last.ToEntityType().AsElementType() as EdmEntityType)!.DeclaredProperties.First(x => x.Name == _segments[i].ToString());
+                    result.Add((_segments[i], _prop));
+                } 
+                else if (result.Last().Item2 is IEdmStructuralProperty)
+                {
+                    // do nothing
+                }
+            }
+            return result;
+        }
+
+        public bool IsPathToKey() =>  _segments.Last().Identifier == ":key";
+        public EdmPath Clone() => new EdmPath(fStormService, this._segments.ToArray());
+
+        public override string ToString() => EdmPath.PATH_ROOT + "/" + String.Join("/", _segments.Select(x => x.ToString()));
     }
 
     public class EdmPathFactory
@@ -166,20 +183,38 @@ namespace FStorm
         {
             this.fStormService = fStormService;
         }
-        public EdmResourcePath CreateResourcePath() => new EdmResourcePath(fStormService);
-        public EdmResourcePath CreateResourcePath(params string[] segments) => new EdmResourcePath(fStormService, segments);
-        public EdmResourcePath CreateResourcePath(params EdmSegment[] segments) => new EdmResourcePath(fStormService, segments);
+        public EdmPath CreateResourcePath() => new EdmPath(fStormService);
+        public EdmPath CreateResourcePath(params string[] segments) => new EdmPath(fStormService, segments);
+        public EdmPath CreateResourcePath(params EdmSegment[] segments) => new EdmPath(fStormService, segments);
 
         public EdmPath Parse(string path)
         {
             if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path));
             if (path.StartsWith(EdmPath.PATH_ROOT))
             {
-                return new EdmResourcePath(fStormService, path.Substring(2).Split("/"));
+                return new EdmPath(fStormService, path.Substring(2).Split("/"));
             }
 
             throw new ArgumentException("Invalid path");
         }
+
+        public EdmPath Resolve(IEdmNavigationSource source) {
+
+            List<(IEdmNavigationSource,string)> segments = new List<(IEdmNavigationSource,string)>();
+            IEdmNavigationSource cursor = source;
+
+            while (cursor is IEdmContainedEntitySet)
+            {
+                var x = (IEdmContainedEntitySet)cursor;
+                segments.Insert(0, (x, x.Name));
+                cursor = x.ParentNavigationSource;
+            }
+
+            segments.Insert(0,(cursor, cursor.Name));
+            return CreateResourcePath(segments.Select(x=> x.Item2).ToArray());
+
+        }
+
     }
 
 }

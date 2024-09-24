@@ -52,7 +52,7 @@ namespace FStorm.Test
         {
             var t = sqlite.BeginTransaction();
             var cmd = sqlite.CreateCommand();
-            cmd.CommandText = "CREATE TABLE TABCustomers (CustomerID INT NOT NULL, RagSoc CHAR(50) NOT NULL); CREATE TABLE TABOrders (OrderNumber INT NOT NULL, Note CHAR(50) NOT NULL, Total decimal(10,5) NULL, CustomerID INT NOT NULL);";
+            cmd.CommandText = "CREATE TABLE TABCustomers (CustomerID INT NOT NULL, RagSoc CHAR(50) NOT NULL, AddressID INT NULL); CREATE TABLE TABOrders (OrderNumber INT NOT NULL, Note CHAR(50) NOT NULL, Total decimal(10,5) NULL, CustomerID INT NOT NULL);";
             cmd.Transaction = t;
             cmd.ExecuteNonQuery();
             t.Commit();

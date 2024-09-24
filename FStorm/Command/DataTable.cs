@@ -114,12 +114,12 @@ namespace FStorm
 
         public List<EdmPath> SortedColumns() {
             List<EdmPath> c = new List<EdmPath>();
-            _Columns.Where(x => typeof(EdmResourcePath)==x.GetType()).ToList().ForEach(x => c.Add(x));
-            _Columns.Where(x => typeof(EdmResourcePath)!=x.GetType()).ToList().ForEach(x => c.Add(x));
+            _Columns.Where(x => typeof(EdmPath)==x.GetType()).ToList().ForEach(x => c.Add(x));
+            _Columns.Where(x => typeof(EdmPath)!=x.GetType()).ToList().ForEach(x => c.Add(x));
 
             bool LeftIsGreaterToRight (EdmPath l, EdmPath r) {
-                if (typeof(EdmResourcePath)==r.GetType() && typeof(EdmResourcePath)!=l.GetType()) return false;
-                if (typeof(EdmResourcePath)!=r.GetType() && typeof(EdmResourcePath)==l.GetType()) return true;
+                if (typeof(EdmPath)==r.GetType() && typeof(EdmPath)!=l.GetType()) return false;
+                if (typeof(EdmPath)!=r.GetType() && typeof(EdmPath)==l.GetType()) return true;
                 if (l.Count() > r.Count()) return true;
                 if (l.Count() < r.Count()) return false;
                 if (l.IsPathToKey() && !r.IsPathToKey()) return false;

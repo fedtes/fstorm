@@ -122,12 +122,12 @@ public class SemanticVisitor
                 return VisitResourceRangeVariableReferenceNode(context, node);
             case ConvertNode node:
                 return VisitExpression(context, node.Source, variable);
+            case AnyNode node:
+                return VisitAnyNode(context, node);
             default:
                 throw new NotImplementedException();
         }
     }
-
-    
 
     public ExpressionValue? VisitBinaryOperator(CompilerContext context, BinaryOperatorNode node)
     {
@@ -168,29 +168,19 @@ public class SemanticVisitor
     {
         if (node.NavigationSource is IEdmContainedEntitySet)
         {
-            List<(IEdmNavigationSource,string)> segments = new List<(IEdmNavigationSource,string)>();
-            IEdmContainedEntitySet source =(IEdmContainedEntitySet)node.NavigationSource;
-            segments.Add((source, source.Name));
-            IEdmNavigationSource parent = source.ParentNavigationSource;
-
-            while (parent is IEdmContainedEntitySet)
-            {
-                var x = (IEdmContainedEntitySet)parent;
-                segments.Insert(0, (x, x.Name));
-                parent = x.ParentNavigationSource;
-            }
-            segments.Insert(0,(parent, parent.Name));
+            var reolvedPath = pathFactory.Resolve((IEdmContainedEntitySet)node.NavigationSource);
+            var segments = reolvedPath.GetEdmElements();
 
             for (int i = 0; i < segments.Count; i++)
             {
-                if (segments[i].Item1 is IEdmContainedEntitySet)
+                if (segments[i].Item2 is IEdmNavigationProperty)
                 {
                     List<string> s = new List<string>();
                     for (int j = 0; j <= i; j++)
                     {
-                        s.Add(segments[j].Item2);
+                        s.Add(segments[j].Item1.ToString());
                     }
-                    context.AddJoin((EdmNavigationProperty)(segments[i].Item1 as IEdmContainedEntitySet).NavigationProperty,
+                    context.AddJoin((EdmNavigationProperty)segments[i].Item2,
                         pathFactory.CreateResourcePath(s.ToArray()) - 1,
                         pathFactory.CreateResourcePath(s.ToArray())
                     );
@@ -198,9 +188,9 @@ public class SemanticVisitor
             }
 
             return new Variable() {
-                Name= source.Name,
-                Type = (EdmEntityType)source.EntityType.AsElementType(),
-                ResourcePath = pathFactory.CreateResourcePath(segments.Select(x => x.Item2).ToArray())
+                Name = reolvedPath.Last().ToString(),
+                Type = reolvedPath.GetContainerType(),
+                ResourcePath = reolvedPath
             };
         }
 
@@ -210,6 +200,13 @@ public class SemanticVisitor
     public ExpressionValue? VisitConstantNode(CompilerContext context, ConstantNode node) {
         return new ConstantValue() { Value = node.Value} ;
     }
+
+    private ExpressionValue? VisitAnyNode(CompilerContext context, AnyNode node)
+    {
+        throw new NotImplementedException();
+    }
+
+
     public void VisitConvertNode(CompilerContext context, ConvertNode node) {
         throw new NotImplementedException();
     }
@@ -331,14 +328,14 @@ public class ConstantValue : ExpressionValue
 
 public class PropertyReference : ExpressionValue
 {
-    public EdmResourcePath ResourcePath {get; set;} = null!;
+    public EdmPath ResourcePath {get; set;} = null!;
 
     public EdmStructuralProperty Property {get; set;} = null!;
 }
 
 public class Variable : ExpressionValue
 {
-    public EdmResourcePath ResourcePath {get; set;} = null!;
+    public EdmPath ResourcePath {get; set;} = null!;
 
     public EdmEntityType Type {get; set;} = null!;
 
