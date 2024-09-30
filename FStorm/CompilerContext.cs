@@ -11,18 +11,14 @@ namespace FStorm
     public class CompilerContext
     {
         /// <summary>
-        /// Query model result of the compilation
+        /// True if in the current scope, the where clauses, are in OR relation each others.
         /// </summary>
-        private Stack<CompilerScope> scope = new Stack<CompilerScope>();
-        private CompilerScope ActiveScope {get => scope.First(x => x.ScopeType != CompilerScope.NO_SCOPE); }
-        private SqlKata.Query MainQuery { get => scope.First(x => x.ScopeType == CompilerScope.MAIN).Query; }
-        private SqlKata.Query Query { get => ActiveScope.Query;}
         private bool IsOr {get => ActiveScope.ScopeType == CompilerScope.OR;}
 
         /// <summary>
-        /// List of all aliases used in the From clausole
+        /// List of all aliases used in the From clause
         /// </summary>
-        private AliasStore Aliases;
+        private AliasStore Aliases {get => MainScope.Aliases; }
         private OutputKind outputKind;
         private EdmPath resourcePath = null!;
         private EdmEntityType? resourceEdmType;
@@ -30,24 +26,22 @@ namespace FStorm
         private FilterClause filter;
 
         public CompilerContext(ODataPath oDataPath, FilterClause filter) {
-            this.Aliases = new AliasStore();
             this.oDataPath= oDataPath;
             this.filter = filter;
             SetMainQuery(new SqlKata.Query());
         }
 
         public CompilerContext(ODataPath oDataPath, FilterClause filter, SqlKata.Query query) {
-            this.Aliases = new AliasStore();
             this.oDataPath= oDataPath;
             this.filter = filter;
             SetMainQuery(query);
         }
 
-        private void SetMainQuery(SqlKata.Query query) {
+        private void SetMainQuery(SqlKata.Query query, AliasStore? aliasStore = null) {
             scope.Clear();
-            scope.Push(new CompilerScope(CompilerScope.MAIN, query));
+            scope.Push(new CompilerScope(CompilerScope.MAIN, query, aliasStore));
         }
-        internal SqlKata.Query GetQuery() => Query;
+        internal SqlKata.Query GetQuery() => ActiveQuery;
         internal ODataPath GetOdataRequestPath() => oDataPath;
         internal FilterClause GetFilterClause() => filter;
         internal OutputKind GetOutputKind() => outputKind;
@@ -57,21 +51,69 @@ namespace FStorm
         internal EdmEntityType? GetOutputType() => resourceEdmType;
         internal void SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
 
+        internal List<Variable> GetVariablesInScope() {
+            return scope.Where(x => x.ScopeType == CompilerScope.VARIABLE)
+                .Select(x => x.Variable)
+                .Where(x => x != null)
+                .Cast<Variable>()
+                .ToList();
+        }
+
+        internal Variable? GetCurrentVariableInScope() {
+            return scope.FirstOrDefault(x => x.ScopeType == CompilerScope.VARIABLE)?.Variable;
+        }
+
+#region "scope manipulation"
+
+        /// <summary>
+        /// Stack tracking various types of <see cref="CompilerScope"/> during the semantic parsing done by <see cref="SemanticVisitor"/>.
+        /// </summary>
+        /// <remarks>
+        /// Each scope may contains various information about variables, subquery, boolean operations, lambdas etc..
+        /// </remarks>
+        private Stack<CompilerScope> scope = new Stack<CompilerScope>();
+
+        /// <summary>
+        /// Return the first "meaningfull" scope of the stack. This could be anything and do not rely on it to access any from/join clasue.
+        /// </summary>
+        private CompilerScope ActiveScope {get => scope.First(x => x.ScopeType != CompilerScope.NO_SCOPE); }
+
+        /// <summary>
+        /// Return the first "query builder" scope containing a from clasue. This may be the MAIN or a suquery actually processing.
+        /// </summary>
+        private CompilerScope MainScope {get => scope.First(x => x.ScopeType == CompilerScope.MAIN || x.ScopeType == CompilerScope.ANY); }
+
+        /// <summary>
+        /// Shortcut to access the underlyng query builder of the <see cref="MainScope"/>.
+        /// </summary>
+        private SqlKata.Query MainQuery { get => MainScope.Query; }
+
+        /// <summary>
+        /// Shortcut to access the underlyng query builder of the <see cref="ActiveScope"/>.
+        /// </summary>
+        private SqlKata.Query ActiveQuery { get => ActiveScope.Query;}
+
+        /// <summary>
+        /// Open an "AND" scope. While in that the where clauses are in AND relation each others 
+        /// </summary>
         internal void OpenAndScope() {
             if (ActiveScope.ScopeType != CompilerScope.AND)
             {
                 scope.Push(new CompilerScope(CompilerScope.AND,new SqlKata.Query()));
             }
             else {
-                scope.Push(new CompilerScope(CompilerScope.NO_SCOPE, Query));
+                scope.Push(new CompilerScope(CompilerScope.NO_SCOPE, ActiveQuery));
             }
         }
 
+        /// <summary>
+        /// Close the current AND scope
+        /// </summary>
         internal void CloseAndScope() {
             if (scope.Peek().ScopeType == CompilerScope.AND)
             {
                 var s = scope.Pop();
-                (IsOr ? Query.Or() : Query).Where(_q => s.Query);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(_q => s.Query);
             }
             else 
             {
@@ -79,6 +121,9 @@ namespace FStorm
             }
         }
 
+        /// <summary>
+        /// Open an "OR" scope. While in that the where clauses are in OR relation each others 
+        /// </summary>
         internal void OpenOrScope() {
             if (ActiveScope.ScopeType != CompilerScope.OR)
             {
@@ -86,21 +131,70 @@ namespace FStorm
             }
             else 
             {
-                scope.Push(new CompilerScope(CompilerScope.NO_SCOPE, Query));
+                scope.Push(new CompilerScope(CompilerScope.NO_SCOPE, ActiveQuery));
             }
         }
 
+        /// <summary>
+        /// Close the current OR scope
+        /// </summary>
         internal void CloseOrScope() {
             if (scope.Peek().ScopeType == CompilerScope.OR)
             {
                 var s = scope.Pop();
-                (IsOr ? Query.Or() : Query).Where(_q => s.Query);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(_q => s.Query);
             }
             else 
             {
                 scope.Pop();
             }
         }
+
+        /// <summary>
+        /// Open a variable scope by pushing a variable into the current context. Variable are visibile from all "children" scope opened from here.
+        /// </summary>
+        /// <param name="variable"></param>
+        internal void OpenVariableScope(Variable variable) {
+            var s = new CompilerScope(CompilerScope.VARIABLE, ActiveQuery, variable);
+            scope.Push(s);
+        }
+
+        /// <summary>
+        /// Close current variable scope and pop the variable out of the visibility, destroying it.
+        /// </summary>
+        /// <exception cref="ApplicationException"></exception>
+        internal void CloseVariableScope() {
+            var s = scope.Pop();
+            if (s.ScopeType != CompilerScope.VARIABLE) 
+                throw new ApplicationException("Should not pass here!!");
+        }
+
+        /// <summary>
+        /// Open a scope where handling the ANY operator. This open a sub-query where all operations are perfomed until the scope is closed.
+        /// </summary>
+        internal void OpenAnyScope()
+        {
+            var anyQ = new SqlKata.Query();
+            var s = new CompilerScope(CompilerScope.ANY, anyQ);
+            scope.Push(s);
+            var _currentInScopeVar = this.GetCurrentVariableInScope()!;
+            var _it = GetVariablesInScope().First(x => x.Name =="$it");
+            AddFrom(_currentInScopeVar.Type, _currentInScopeVar.ResourcePath);
+            ActiveQuery.WhereColumns($"{_currentInScopeVar.ResourcePath}.{_currentInScopeVar.Type.GetEntityKey().columnName}","=", $"{_it.ResourcePath}.{_it.Type.GetEntityKey().columnName}");
+        }
+
+        /// <summary>
+        /// Close the current ANY scope and link the resutl to the main query.
+        /// </summary>
+        /// <exception cref="ApplicationException"></exception>
+        internal void CloseAnyScope()
+        {
+            var s = scope.Pop();
+            if (s.ScopeType != CompilerScope.ANY)  throw new ApplicationException("Should not pass here!!");
+            (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereExists(s.Query);
+        }
+
+#endregion
 
 #region "query manipulation"
         internal EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
@@ -125,7 +219,7 @@ namespace FStorm
         internal void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
         {
             var p = Aliases.AddOrGet(edmPath);
-            Query.Select($"{p}.{property.columnName} as {p}/{(customName ?? property.Name)}");
+            ActiveQuery.Select($"{p}.{property.columnName} as {p}/{(customName ?? property.Name)}");
         }
 
         internal void AddSelectAuto() {
@@ -145,7 +239,7 @@ namespace FStorm
         internal void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty)
         {
             var p = Aliases.AddOrGet(edmPath);
-            Query.AsCount(new string[] {$"{p}.{edmStructuralProperty.columnName}"});
+            ActiveQuery.AsCount(new string[] {$"{p}.{edmStructuralProperty.columnName}"});
         }
 
         internal void AddFilter(BinaryFilter filter)
@@ -160,22 +254,22 @@ namespace FStorm
                     throw new NotImplementedException();
                     break;
                 case BinaryOperatorKind.Equal:
-                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}","=", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","=", filter.Value);
                     break;
                 case BinaryOperatorKind.NotEqual:
-                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}","<>", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","<>", filter.Value);
                     break;
                 case BinaryOperatorKind.GreaterThan:
-                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}",">", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}",">", filter.Value);
                     break;
                 case BinaryOperatorKind.GreaterThanOrEqual:
-                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}",">=", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}",">=", filter.Value);
                     break;
                 case BinaryOperatorKind.LessThan:
-                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}","<", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","<", filter.Value);
                     break;
                 case BinaryOperatorKind.LessThanOrEqual:
-                    (IsOr ? Query.Or() : Query).Where($"{p}.{filter.PropertyReference.Property.columnName}","<=", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","<=", filter.Value);
                     break;
                 case BinaryOperatorKind.Add:
                     throw new NotImplementedException();
@@ -198,6 +292,7 @@ namespace FStorm
             }
         }
 
+
         internal void WrapQuery(EdmPath resourcePath)
         {
             if (scope.Count > 1 || scope.Peek().ScopeType != CompilerScope.MAIN) {
@@ -207,8 +302,7 @@ namespace FStorm
             this.AddSelectAuto();
             CompilerContext tmpctx = new CompilerContext(this.GetOdataRequestPath(), filter);
             var p = tmpctx.Aliases.AddOrGet(resourcePath);
-            SetMainQuery(tmpctx.Query.From(this.Query, p));
-            this.Aliases = tmpctx.Aliases;
+            SetMainQuery(tmpctx.ActiveQuery.From(this.ActiveQuery, p), tmpctx.Aliases);
         }
 
         #endregion
@@ -244,13 +338,32 @@ namespace FStorm
         public const string AND = "and";
         public const string OR = "or";
         public const string NO_SCOPE = "noscope";
-        public readonly SqlKata.Query Query;
+        public const string VARIABLE = "var";
+        public const string ANY = "any";
 
+        public readonly SqlKata.Query Query;
         public readonly string ScopeType;
+        public readonly Variable? Variable;
+
+        public readonly AliasStore Aliases;
 
         internal CompilerScope(string scopeType, SqlKata.Query query){
             ScopeType = scopeType;
             Query = query;
+            Aliases = new AliasStore();
+        }
+
+        internal CompilerScope(string scopeType, SqlKata.Query query, AliasStore? aliasStore){
+            ScopeType = scopeType;
+            Query = query;
+            Aliases = aliasStore ?? new AliasStore();
+        }
+
+        internal CompilerScope(string scopeType, SqlKata.Query query, Variable variable){
+            ScopeType = scopeType;
+            Query = query;
+            this.Variable = variable;
+            Aliases = new AliasStore();
         }
 
         public override string ToString()

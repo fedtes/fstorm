@@ -87,14 +87,14 @@ namespace FStorm
                             // Add Columns to data table
                             if (0==rowIdx) {
                                 for (int i = 0; i < r.FieldCount; i++) {
-                                    dt.AddColumn(pathFactory.Parse(r.GetName(i)));
+                                    dt.AddColumn(pathFactory.ParseString(r.GetName(i)));
                                 }
                             }
                             // Fill row values
                             var row = dt.CreateRow();
                             for (int i = 0; i < r.FieldCount; i++)
                             {
-                                var p = pathFactory.Parse(r.GetName(i));
+                                var p = pathFactory.ParseString(r.GetName(i));
                                 row[p] = r.IsDBNull(i) ? null : Helpers.TypeConverter(r.GetValue(i), p.GetTypeKind());
                             }
                         }
@@ -102,7 +102,7 @@ namespace FStorm
                 }
                 else 
                 {
-                    var valuePath = pathFactory.Parse(EdmPath.PATH_ROOT + "/value");
+                    var valuePath = pathFactory.ParseString(EdmPath.PATH_ROOT + "/value");
                     dt.AddColumn(valuePath);
                     var row = dt.CreateRow();
                     row[valuePath] = await cmd.ExecuteScalarAsync();

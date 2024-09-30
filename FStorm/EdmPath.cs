@@ -17,13 +17,16 @@ namespace FStorm
         public override string ToString() => Identifier;
     }
 
+    /// <summary>
+    /// Describe the path from a starting Entity to a specific property throught all the the navigation steps across the EntityDataModel (<see cref="EdmModel"/>)
+    /// </summary>
     public class EdmPath : IEnumerable<EdmSegment>
     {
 
         public const string PATH_ROOT = "~";
         protected List<EdmSegment> _segments;
         protected readonly FStormService fStormService;
-
+#region "costructors"
         internal EdmPath(FStormService fStormService)
         {
             this.fStormService = fStormService;
@@ -41,6 +44,7 @@ namespace FStorm
             this.fStormService = fStormService;
             _segments = segments.ToList();
         }
+#endregion
 
 #region "Operators"
         public static EdmPath operator +(EdmPath x, EdmSegment y)
@@ -85,11 +89,14 @@ namespace FStorm
         public override int GetHashCode() => ToString().GetHashCode();
 #endregion
 
-
+        /// <summary>
+        /// Return the primitive type kind of the property that refers to this path if it is a structural property else return <see cref="EdmPrimitiveTypeKind.None"/>
+        /// </summary>
+        /// <returns></returns>
         public EdmPrimitiveTypeKind GetTypeKind()
         {
             if (IsPathToKey()) {
-                EdmEntityType entityType = GetContainerType();
+                EdmEntityType entityType = GetContainerType()!;
                 var _key = entityType.DeclaredKey.First();
                 return _key.Type switch {
                      EdmPrimitiveTypeReference primitive => primitive.PrimitiveKind(),
@@ -99,7 +106,10 @@ namespace FStorm
             } else {
                 var result = EdmPrimitiveTypeKind.None;
                 var entityType = GetContainerType();
-                var prop = entityType.Properties().First(x => x.Name == _segments.Last().ToString());
+                if (entityType == null) return EdmPrimitiveTypeKind.None;
+
+                var l =_segments.Last().ToString();
+                var prop = entityType.Properties().FirstOrDefault(x => x.Name == l);
                 if (prop != null && prop.PropertyKind == EdmPropertyKind.Structural)
                 {
                     var _type = (prop as IEdmStructuralProperty)!.Type;
@@ -115,32 +125,52 @@ namespace FStorm
                 }
                 return result;
             }
-            
         }
 
-        public EdmEntityType GetContainerType()
+        /// <summary>
+        /// Get the <see cref="EdmEntityType"/> that contains the element defined by this path. Return null if the path is empty.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public EdmEntityType? GetContainerType()
         {
-            EdmEntityType? entityType = null;
-            for (int i = 0; i < this.Count()-1; i++)
-            {
-                if (i == 0)
+            var _elements = AsEdmElements();
+            if (_elements.Count == 0) {
+                return null;
+            } 
+            if (_elements.Count == 1) {
+                var (a,b) = _elements[_elements.Count-1];
+                if (b is IEdmEntitySet entitySet)
                 {
-                    var ns = fStormService.Model.DeclaredNamespaces.First();
-                    entityType = (EdmEntityType?)fStormService.Model.FindDeclaredEntitySet(_segments[i].ToString()).Type.AsElementType();
+                    return (EdmEntityType)entitySet.EntityType.AsElementType();
                 }
-                else
+                else 
                 {
-                    var navProp = entityType.DeclaredNavigationProperties().First(x => x.Name == _segments[i].ToString());
-                    entityType = (EdmEntityType?)navProp.Type.ToStructuredType()!;
+                    throw new InvalidOperationException($"Path {this.ToString()} do not refers to any valid EntityType.");
+                }
+            } 
+            else 
+            {
+                var (a,b) = _elements[_elements.Count-2];
+                if (b is IEdmEntitySet entitySet)
+                {
+                    return (EdmEntityType)entitySet.EntityType.AsElementType();
+                }
+                else if (b is IEdmNavigationProperty property) 
+                {
+                    return property.DeclaringType.EnsureType(this.fStormService);
+                } else 
+                {
+                    throw new InvalidOperationException($"Path {this.ToString()} do not refers to any valid EntityType.");
                 }
             }
-            if (entityType == null)
-                throw new InvalidOperationException($"Path {this.ToString()} do not refers to any valid EntityType.");
-            else
-                return entityType;
         }
 
-        public List<(EdmSegment, IEdmElement)> GetEdmElements()
+        /// <summary>
+        /// Trasform the current path into an ordered list of tuples where each one is the <see cref="EdmSegment"/> and the corrispondig <see cref="IEdmElement"/> described in the <see cref="EdmModel"/>.
+        /// </summary>
+        /// <returns></returns>
+        public List<(EdmSegment, IEdmElement)> AsEdmElements()
         {
             List<(EdmSegment, IEdmElement)> result =new List<(EdmSegment, IEdmElement)>();
             for (int i = 0; i < this.Count(); i++)
@@ -153,12 +183,12 @@ namespace FStorm
                 else if (result.Last().Item2 is IEdmEntitySet)
                 {
                     var _last = (IEdmEntitySet)result.Last().Item2;
-                    var _prop = (_last.EntityType.AsElementType() as EdmEntityType)!.DeclaredProperties.First(x => x.Name == _segments[i].ToString());
+                    var _prop = (_last.EntityType.AsElementType() as EdmEntityType)!.FindProperty(_segments[i].ToString());
                     result.Add((_segments[i], _prop));
                 }
                 else if (result.Last().Item2 is IEdmNavigationProperty) {
                     var _last = (IEdmNavigationProperty)result.Last().Item2;
-                    var _prop = (_last.ToEntityType().AsElementType() as EdmEntityType)!.DeclaredProperties.First(x => x.Name == _segments[i].ToString());
+                    var _prop = (_last.ToEntityType().AsElementType() as EdmEntityType)!.FindProperty(_segments[i].ToString());
                     result.Add((_segments[i], _prop));
                 } 
                 else if (result.Last().Item2 is IEdmStructuralProperty)
@@ -175,6 +205,9 @@ namespace FStorm
         public override string ToString() => EdmPath.PATH_ROOT + "/" + String.Join("/", _segments.Select(x => x.ToString()));
     }
 
+    /// <summary>
+    /// Expose method to create <see cref="EdmPath"/>
+    /// </summary>
     public class EdmPathFactory
     {
         private readonly FStormService fStormService;
@@ -183,11 +216,32 @@ namespace FStorm
         {
             this.fStormService = fStormService;
         }
-        public EdmPath CreateResourcePath() => new EdmPath(fStormService);
-        public EdmPath CreateResourcePath(params string[] segments) => new EdmPath(fStormService, segments);
-        public EdmPath CreateResourcePath(params EdmSegment[] segments) => new EdmPath(fStormService, segments);
-
-        public EdmPath Parse(string path)
+        /// <summary>
+        /// Create an empty <see cref="EdmPath"/>
+        /// </summary>
+        /// <returns></returns>
+        public EdmPath CreatePath() => new EdmPath(fStormService);
+        /// <summary>
+        /// Create and initialize an <see cref="EdmPath"/> from the segments passed as argument.
+        /// </summary>
+        /// <param name="segments">from left (path start) to right (path end)</param>
+        /// <returns></returns>
+        public EdmPath CreatePath(params string[] segments) => new EdmPath(fStormService, segments);
+        /// <summary>
+        /// Create and initialize an <see cref="EdmPath"/> from the segments passed as argument.
+        /// </summary>
+        /// <param name="segments">from left (path start) to right (path end)</param>
+        /// <returns></returns>
+        public EdmPath CreatePath(params EdmSegment[] segments) => new EdmPath(fStormService, segments);
+        
+        /// <summary>
+        /// Try parse a string into a <see cref="EdmPath"/>
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public EdmPath ParseString(string path)
         {
             if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path));
             if (path.StartsWith(EdmPath.PATH_ROOT))
@@ -198,7 +252,12 @@ namespace FStorm
             throw new ArgumentException("Invalid path");
         }
 
-        public EdmPath Resolve(IEdmNavigationSource source) {
+        /// <summary>
+        /// Create an <see cref="EdmPath"/> from a <see cref="IEdmNavigationSource"/> by following the hierarchy till the root.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public EdmPath FromNavigationSource(IEdmNavigationSource source) {
 
             List<(IEdmNavigationSource,string)> segments = new List<(IEdmNavigationSource,string)>();
             IEdmNavigationSource cursor = source;
@@ -211,7 +270,7 @@ namespace FStorm
             }
 
             segments.Insert(0,(cursor, cursor.Name));
-            return CreateResourcePath(segments.Select(x=> x.Item2).ToArray());
+            return CreatePath(segments.Select(x=> x.Item2).ToArray());
 
         }
 

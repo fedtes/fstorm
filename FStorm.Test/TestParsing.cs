@@ -369,7 +369,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=Orders/any(x:x/Total gt 100)" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc] FROM [TABCustomers] AS [~/Customers] WHERE (([~/Customers].[CustomerID] = @p0 AND [~/Customers].[CustomerID] = @p1) OR ([~/Customers].[CustomerID] = @p2 AND ([~/Customers].[CustomerID] = @p3 OR [~/Customers].[CustomerID] = @p4 OR [~/Customers].[CustomerID] = @p5) AND [~/Customers].[CustomerID] = @p6))";
+            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE EXISTS (SELECT 1 FROM [TABOrders] AS [~/Customers/Orders] WHERE [~/Customers/Orders].[OrderNumber] = [~/Customers].[CustomerID] AND [~/Customers/Orders].[Total] > @p0)";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 

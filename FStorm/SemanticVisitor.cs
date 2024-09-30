@@ -7,9 +7,11 @@ namespace FStorm;
 public class SemanticVisitor
 {
     private readonly EdmPathFactory pathFactory;
+    private readonly FStormService service;
 
-    public SemanticVisitor(EdmPathFactory pathFactory){
+    public SemanticVisitor(EdmPathFactory pathFactory, FStormService service){
         this.pathFactory = pathFactory;
+        this.service = service;
     }
 
     public void VisitPath(CompilerContext context, ODataPath oDataPath) 
@@ -40,12 +42,11 @@ public class SemanticVisitor
                     throw new NotImplementedException();
             }
         }
-
     }
 
     public void VisitEntitySetSegment(CompilerContext context, EntitySetSegment entitySetSegment) 
     {
-        EdmPath alias = context.AddFrom((EdmEntityType)entitySetSegment.EdmType.AsElementType(), pathFactory.Parse(EdmPath.PATH_ROOT + "/" + entitySetSegment.Identifier));
+        EdmPath alias = context.AddFrom((EdmEntityType)entitySetSegment.EdmType.AsElementType(), pathFactory.ParseString(EdmPath.PATH_ROOT + "/" + entitySetSegment.Identifier));
         context.SetOutputKind(OutputKind.Collection);
         context.SetOutputType((EdmEntityType)entitySetSegment.EdmType.AsElementType());
         context.SetOutputPath(alias);
@@ -70,7 +71,7 @@ public class SemanticVisitor
         var k = (keySegment.NavigationSource.Type.AsElementType() as EdmEntityType)!.GetEntityKey();
         BinaryFilter filter = new BinaryFilter() {
             PropertyReference = new PropertyReference() {
-                ResourcePath = pathFactory.CreateResourcePath(keySegment.NavigationSource.Path.PathSegments.ToArray()),
+                ResourcePath = pathFactory.CreatePath(keySegment.NavigationSource.Path.PathSegments.ToArray()),
                 Property = k
             },
             OperatorKind= BinaryOperatorKind.Equal,
@@ -96,12 +97,28 @@ public class SemanticVisitor
     {
         
         context.WrapQuery(context.GetOutputPath());
+        var _it = new Variable() 
+        {
+            Name = filterSegment.RangeVariable.Name,
+            ResourcePath = pathFactory.CreatePath((filterSegment.RangeVariable as ResourceRangeVariable)!.NavigationSource.Path.PathSegments.ToArray()),
+            Type = filterSegment.RangeVariable.TypeReference.ToStructuredType().EnsureType(service)
+        };
+        context.OpenVariableScope(_it);
         VisitExpression(context, filterSegment.Expression, filterSegment.RangeVariable);
+        context.CloseVariableScope();
     }
 
     public void VisitFilterClause(CompilerContext context, FilterClause filterClause){
         if (filterClause != null) {
+            var _it = new Variable() 
+            {
+                Name = filterClause.RangeVariable.Name,
+                ResourcePath = pathFactory.CreatePath((filterClause.RangeVariable as ResourceRangeVariable)!.NavigationSource.Path.PathSegments.ToArray()),
+                Type = filterClause.RangeVariable.TypeReference.ToStructuredType().EnsureType(service)
+            };
+            context.OpenVariableScope(_it);
             VisitExpression(context, filterClause.Expression, filterClause.RangeVariable);
+            context.CloseVariableScope();
         }
     }
 
@@ -168,8 +185,8 @@ public class SemanticVisitor
     {
         if (node.NavigationSource is IEdmContainedEntitySet)
         {
-            var reolvedPath = pathFactory.Resolve((IEdmContainedEntitySet)node.NavigationSource);
-            var segments = reolvedPath.GetEdmElements();
+            var reolvedPath = pathFactory.FromNavigationSource((IEdmContainedEntitySet)node.NavigationSource);
+            var segments = reolvedPath.AsEdmElements();
 
             for (int i = 0; i < segments.Count; i++)
             {
@@ -181,15 +198,15 @@ public class SemanticVisitor
                         s.Add(segments[j].Item1.ToString());
                     }
                     context.AddJoin((EdmNavigationProperty)segments[i].Item2,
-                        pathFactory.CreateResourcePath(s.ToArray()) - 1,
-                        pathFactory.CreateResourcePath(s.ToArray())
+                        pathFactory.CreatePath(s.ToArray()) - 1,
+                        pathFactory.CreatePath(s.ToArray())
                     );
                 }
             }
 
             return new Variable() {
                 Name = reolvedPath.Last().ToString(),
-                Type = reolvedPath.GetContainerType(),
+                Type = reolvedPath.GetContainerType()!,
                 ResourcePath = reolvedPath
             };
         }
@@ -203,7 +220,17 @@ public class SemanticVisitor
 
     private ExpressionValue? VisitAnyNode(CompilerContext context, AnyNode node)
     {
-        throw new NotImplementedException();
+        Variable v = new Variable() {
+            Name = node.CurrentRangeVariable.Name,
+            ResourcePath = pathFactory.CreatePath((node.CurrentRangeVariable as ResourceRangeVariable)!.NavigationSource.Path.PathSegments.ToArray()),
+            Type = node.CurrentRangeVariable.TypeReference.ToStructuredType().EnsureType(service),
+        };
+        context.OpenVariableScope(v);
+        context.OpenAnyScope();
+        VisitExpression(context, node.Body);
+        context.CloseAnyScope();
+        context.CloseVariableScope();
+        return new ExpressionValue();
     }
 
 
@@ -245,11 +272,7 @@ public class SemanticVisitor
 
     private ExpressionValue? VisitResourceRangeVariableReferenceNode(CompilerContext context, ResourceRangeVariableReferenceNode node)
     {
-        return new Variable() {
-            ResourcePath = pathFactory.CreateResourcePath(node.RangeVariable.NavigationSource.Path.PathSegments.ToArray()),
-            Type = (EdmEntityType)node.RangeVariable.StructuredTypeReference.Definition.AsElementType(),
-            Name = node.RangeVariable.Name
-        };
+        return context.GetVariablesInScope().First(x => x.Name == node.Name);
     }
 
 

@@ -26,7 +26,7 @@ namespace FStorm.Test
         public void It_should_create_1_entity_path()
         {
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
-            var path = factory.CreateResourcePath("Customers");
+            var path = factory.CreatePath("Customers");
             Assert.That(path.ToString(), Is.EqualTo("~/Customers"));
         }
 
@@ -35,7 +35,7 @@ namespace FStorm.Test
         public void It_should_create_complete_path()
         {
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
-            var path = factory.CreateResourcePath("Customers", "Orders");
+            var path = factory.CreatePath("Customers", "Orders");
             Assert.That(path.ToString(), Is.EqualTo("~/Customers/Orders"));
         }
 
@@ -44,7 +44,7 @@ namespace FStorm.Test
         public void It_should_combine_path()
         {
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
-            var path = factory.CreateResourcePath("Customers");
+            var path = factory.CreatePath("Customers");
             var path1 = path + "Orders";
             Assert.That(path.ToString(), Is.EqualTo("~/Customers"));
             Assert.That(path1.ToString(), Is.EqualTo("~/Customers/Orders"));
@@ -54,7 +54,7 @@ namespace FStorm.Test
         public void It_should_pop_from_path()
         {
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
-            var path = factory.CreateResourcePath("Customers");
+            var path = factory.CreatePath("Customers");
             var path1 = path + "Orders";
             var path2 = path1 - 1;
             Assert.That(path.ToString(), Is.EqualTo("~/Customers"));
@@ -66,7 +66,7 @@ namespace FStorm.Test
         public void It_should_throw_on_invalid_pop_len()
         {
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
-            var path = factory.CreateResourcePath("Customers") + "Orders";
+            var path = factory.CreatePath("Customers") + "Orders";
             Assert.Throws<ArgumentException>(() => { var x = path - 3; });
         }
 
@@ -75,7 +75,7 @@ namespace FStorm.Test
         public void It_should_throw_on_wrong_segment_format()
         {
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
-            Assert.Throws<ArgumentException>(() => factory.CreateResourcePath("Cus/tomers"));
+            Assert.Throws<ArgumentException>(() => factory.CreatePath("Cus/tomers"));
         }
 
 
@@ -83,12 +83,12 @@ namespace FStorm.Test
         public void It_should_sort_datatable_columns()
         {
             EdmPathFactory factory = serviceProvider.GetService<EdmPathFactory>()!;
-            DataTable dt = new DataTable(factory.Parse("~/Customer"));
-            dt.AddColumn(factory.Parse("~/Customer/:key"));
-            dt.AddColumn(factory.Parse("~/Customer/Orders/OrderNumber"));
-            dt.AddColumn(factory.Parse("~/Customer/ID"));
-            dt.AddColumn(factory.Parse("~/Customer/Orders/:key"));
-            dt.AddColumn(factory.Parse("~/Customer/RagSoc"));
+            DataTable dt = new DataTable(factory.ParseString("~/Customer"));
+            dt.AddColumn(factory.ParseString("~/Customer/:key"));
+            dt.AddColumn(factory.ParseString("~/Customer/Orders/OrderNumber"));
+            dt.AddColumn(factory.ParseString("~/Customer/ID"));
+            dt.AddColumn(factory.ParseString("~/Customer/Orders/:key"));
+            dt.AddColumn(factory.ParseString("~/Customer/RagSoc"));
 
             var s = dt.SortedColumns();
             Assert.That(s[0].ToString(), Is.EqualTo("~/Customer/:key"));

@@ -28,54 +28,54 @@ public class TestResults
     [Test()]
     public void It_should_create_object_data(){
         EdmPathFactory factory = serviceProvider.GetService<EdmPathFactory>()!;
-        DataTable dt = new DataTable(factory.Parse("~/Customer"));
-        dt.AddColumn(factory.Parse("~/Customer/:key"));
-        dt.AddColumn(factory.Parse("~/Customer/RagSoc"));
-        dt.AddColumn(factory.Parse("~/Customer/ID"));
-        dt.AddColumn(factory.Parse("~/Customer/Orders/:key"));
-        dt.AddColumn(factory.Parse("~/Customer/Orders/OrderNumber"));
+        DataTable dt = new DataTable(factory.ParseString("~/Customer"));
+        dt.AddColumn(factory.ParseString("~/Customer/:key"));
+        dt.AddColumn(factory.ParseString("~/Customer/RagSoc"));
+        dt.AddColumn(factory.ParseString("~/Customer/ID"));
+        dt.AddColumn(factory.ParseString("~/Customer/Orders/:key"));
+        dt.AddColumn(factory.ParseString("~/Customer/Orders/OrderNumber"));
         
         var r = dt.CreateRow();
-        r[factory.Parse("~/Customer/:key")]=1;
-        r[factory.Parse("~/Customer/RagSoc")]="ACME";
-        r[factory.Parse("~/Customer/ID")]=1;
-        r[factory.Parse("~/Customer/Orders/:key")]="O_1";
-        r[factory.Parse("~/Customer/Orders/OrderNumber")]="O_1";
+        r[factory.ParseString("~/Customer/:key")]=1;
+        r[factory.ParseString("~/Customer/RagSoc")]="ACME";
+        r[factory.ParseString("~/Customer/ID")]=1;
+        r[factory.ParseString("~/Customer/Orders/:key")]="O_1";
+        r[factory.ParseString("~/Customer/Orders/OrderNumber")]="O_1";
 
         r = dt.CreateRow();
-        r[factory.Parse("~/Customer/:key")]=1;
-        r[factory.Parse("~/Customer/RagSoc")]="ACME";
-        r[factory.Parse("~/Customer/ID")]=1;
-        r[factory.Parse("~/Customer/Orders/:key")]="O_2";
-        r[factory.Parse("~/Customer/Orders/OrderNumber")]="O_2";
+        r[factory.ParseString("~/Customer/:key")]=1;
+        r[factory.ParseString("~/Customer/RagSoc")]="ACME";
+        r[factory.ParseString("~/Customer/ID")]=1;
+        r[factory.ParseString("~/Customer/Orders/:key")]="O_2";
+        r[factory.ParseString("~/Customer/Orders/OrderNumber")]="O_2";
 
         r = dt.CreateRow();
-        r[factory.Parse("~/Customer/:key")]=1;
-        r[factory.Parse("~/Customer/RagSoc")]="ACME";
-        r[factory.Parse("~/Customer/ID")]=1;
-        r[factory.Parse("~/Customer/Orders/:key")]="O_3";
-        r[factory.Parse("~/Customer/Orders/OrderNumber")]="O_3";
+        r[factory.ParseString("~/Customer/:key")]=1;
+        r[factory.ParseString("~/Customer/RagSoc")]="ACME";
+        r[factory.ParseString("~/Customer/ID")]=1;
+        r[factory.ParseString("~/Customer/Orders/:key")]="O_3";
+        r[factory.ParseString("~/Customer/Orders/OrderNumber")]="O_3";
 
         r = dt.CreateRow();
-        r[factory.Parse("~/Customer/:key")]=2;
-        r[factory.Parse("~/Customer/RagSoc")]="ECorp";
-        r[factory.Parse("~/Customer/ID")]=2;
-        r[factory.Parse("~/Customer/Orders/:key")]="O_5";
-        r[factory.Parse("~/Customer/Orders/OrderNumber")]="O_5";
+        r[factory.ParseString("~/Customer/:key")]=2;
+        r[factory.ParseString("~/Customer/RagSoc")]="ECorp";
+        r[factory.ParseString("~/Customer/ID")]=2;
+        r[factory.ParseString("~/Customer/Orders/:key")]="O_5";
+        r[factory.ParseString("~/Customer/Orders/OrderNumber")]="O_5";
 
         r = dt.CreateRow();
-        r[factory.Parse("~/Customer/Orders/:key")]=null;
-        r[factory.Parse("~/Customer/:key")]=3;
-        r[factory.Parse("~/Customer/RagSoc")]="DreamSolutions";
-        r[factory.Parse("~/Customer/ID")]=3;
-        r[factory.Parse("~/Customer/Orders/OrderNumber")]=null;
+        r[factory.ParseString("~/Customer/Orders/:key")]=null;
+        r[factory.ParseString("~/Customer/:key")]=3;
+        r[factory.ParseString("~/Customer/RagSoc")]="DreamSolutions";
+        r[factory.ParseString("~/Customer/ID")]=3;
+        r[factory.ParseString("~/Customer/Orders/OrderNumber")]=null;
     
         r = dt.CreateRow();
-        r[factory.Parse("~/Customer/:key")]=1;
-        r[factory.Parse("~/Customer/RagSoc")]="ACME";
-        r[factory.Parse("~/Customer/Orders/:key")]="O_4";
-        r[factory.Parse("~/Customer/ID")]=1;
-        r[factory.Parse("~/Customer/Orders/OrderNumber")]="O_4";
+        r[factory.ParseString("~/Customer/:key")]=1;
+        r[factory.ParseString("~/Customer/RagSoc")]="ACME";
+        r[factory.ParseString("~/Customer/Orders/:key")]="O_4";
+        r[factory.ParseString("~/Customer/ID")]=1;
+        r[factory.ParseString("~/Customer/Orders/OrderNumber")]="O_4";
 
         var dos= dt.ToDataObjects();
 
