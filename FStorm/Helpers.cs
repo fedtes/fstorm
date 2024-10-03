@@ -44,13 +44,18 @@ namespace FStorm
         /// <param name="type"></param>
         /// <param name="service"></param>
         /// <returns></returns>
-        public static EdmEntityType EnsureType(this IEdmStructuredType type, FStormService service) {
+        public static EdmEntityType EnsureType(this IEdmType type, FStormService service) {
             if (type is Microsoft.OData.Edm.EdmEntityType odataType) {
                 return (EdmEntityType)service.Model.FindDeclaredType(odataType.FullName);
             } 
             else {
                 return (EdmEntityType)type;
             }
+        }
+
+        public static (EdmStructuralProperty sourceProperty, EdmStructuralProperty targetProperty) GetRelationProperties(this EdmNavigationProperty property) {
+            var constraint = property.ReferentialConstraint.PropertyPairs.First();
+            return ((EdmStructuralProperty)constraint.PrincipalProperty, (EdmStructuralProperty)constraint.DependentProperty);
         }
 
     }

@@ -56,9 +56,22 @@ namespace FStorm
 
         public static EdmPath operator -(EdmPath x, int segmentCount)
         {
-            if (segmentCount >= x._segments.Count) { throw new ArgumentException($"Cannot subtract more than {x._segments.Count} segments."); }
+            if (segmentCount > x._segments.Count) { throw new ArgumentException($"Cannot subtract more than {x._segments.Count} segments."); }
+            if (segmentCount == x._segments.Count) return x.Clone();
             var x1 = x.Clone();
             x1._segments = x1._segments.Take(x1._segments.Count - segmentCount).ToList();
+            return x1;
+        }
+
+        public static EdmPath operator -(EdmPath x, EdmPath y) {
+            if (x.Count() <= y.Count()) throw new ArgumentException("Left operand must be creater than right operand");
+            int i=0;
+            while (i < y.Count() && x._segments[i].Identifier == y._segments[i].Identifier)
+            {
+                i++;
+            }
+            var x1 = x.Clone();
+            x1._segments = x1._segments.Skip(i).ToList();
             return x1;
         }
 
@@ -167,29 +180,29 @@ namespace FStorm
         }
 
         /// <summary>
-        /// Trasform the current path into an ordered list of tuples where each one is the <see cref="EdmSegment"/> and the corrispondig <see cref="IEdmElement"/> described in the <see cref="EdmModel"/>.
+        /// Trasform the current path into an ordered list of tuples where each one is the subpath (<see cref="EdmPath"/>) and the corrispondig <see cref="IEdmElement"/> described in the <see cref="EdmModel"/>.
         /// </summary>
         /// <returns></returns>
-        public List<(EdmSegment, IEdmElement)> AsEdmElements()
+        public List<(EdmPath, IEdmElement)> AsEdmElements()
         {
-            List<(EdmSegment, IEdmElement)> result =new List<(EdmSegment, IEdmElement)>();
+            List<(EdmPath, IEdmElement)> result =new List<(EdmPath, IEdmElement)>();
             for (int i = 0; i < this.Count(); i++)
             {
                 if (i == 0)
                 {
                     var ns = fStormService.Model.DeclaredNamespaces.First();
-                    result.Add((_segments[i], fStormService.Model.FindDeclaredEntitySet(_segments[i].ToString())));
+                    result.Add((new EdmPath(fStormService,_segments.Take(i + 1).ToArray()), fStormService.Model.FindDeclaredEntitySet(_segments[i].ToString())));
                 }
                 else if (result.Last().Item2 is IEdmEntitySet)
                 {
                     var _last = (IEdmEntitySet)result.Last().Item2;
                     var _prop = (_last.EntityType.AsElementType() as EdmEntityType)!.FindProperty(_segments[i].ToString());
-                    result.Add((_segments[i], _prop));
+                    result.Add((new EdmPath(fStormService,_segments.Take(i + 1).ToArray()), _prop));
                 }
                 else if (result.Last().Item2 is IEdmNavigationProperty) {
                     var _last = (IEdmNavigationProperty)result.Last().Item2;
                     var _prop = (_last.ToEntityType().AsElementType() as EdmEntityType)!.FindProperty(_segments[i].ToString());
-                    result.Add((_segments[i], _prop));
+                    result.Add((new EdmPath(fStormService,_segments.Take(i + 1).ToArray()), _prop));
                 } 
                 else if (result.Last().Item2 is IEdmStructuralProperty)
                 {

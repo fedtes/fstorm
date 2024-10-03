@@ -32,7 +32,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers" })
                 .ToSQL();
 
-            string expected = "SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers]";
+            string expected = "SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1]";
             Assert.That(_SqlQuery.Statement, Is.EqualTo(expected));
         }
 
@@ -45,7 +45,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)" })
                 .ToSQL();
 
-            string expected = "SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[CustomerID] = @p0";
+            string expected = "SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] = @p0";
             Assert.That(_SqlQuery.Statement, Is.EqualTo(expected));
         }
 
@@ -57,7 +57,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/RagSoc" })
                 .ToSQL();
 
-            string expected = "SELECT [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[CustomerID] AS [~/Customers/:key] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[CustomerID] = @p0";
+            string expected = "SELECT [P1].[RagSoc] AS [P1/RagSoc], [P1].[CustomerID] AS [P1/:key] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] = @p0";
             Assert.That(_SqlQuery.Statement, Is.EqualTo(expected));
         }
 
@@ -70,7 +70,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/Number], [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[Note] AS [~/Customers/Orders/Note], [~/Customers/Orders].[Total] AS [~/Customers/Orders/Total], [~/Customers/Orders].[CustomerID] AS [~/Customers/Orders/CustomerID] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0";
+            string expected = @"SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -82,7 +82,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/Number], [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[Note] AS [~/Customers/Orders/Note], [~/Customers/Orders].[Total] AS [~/Customers/Orders/Total], [~/Customers/Orders].[CustomerID] AS [~/Customers/Orders/CustomerID] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0 AND [~/Customers/Orders].[OrderNumber] = @p1";
+            string expected = @"SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0 AND [P2].[OrderNumber] = @p1";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -94,7 +94,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')/OrderDate" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0 AND [~/Customers/Orders].[OrderNumber] = @p1";
+            string expected = @"SELECT [P2].[OrderDate] AS [P2/OrderDate], [P2].[OrderNumber] AS [P2/:key] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0 AND [P2].[OrderNumber] = @p1";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -106,7 +106,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')/Customer" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers/Orders/Customer].[CustomerID] AS [~/Customers/Orders/Customer/:key], [~/Customers/Orders/Customer].[CustomerID] AS [~/Customers/Orders/Customer/ID], [~/Customers/Orders/Customer].[RagSoc] AS [~/Customers/Orders/Customer/RagSoc], [~/Customers/Orders/Customer].[AddressID] AS [~/Customers/Orders/Customer/AddressID] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID]INNER JOIN [TABCustomers] AS [~/Customers/Orders/Customer] ON [~/Customers/Orders/Customer].[CustomerID] = [~/Customers/Orders].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0 AND [~/Customers/Orders].[OrderNumber] = @p1";
+            string expected = @"SELECT [P3].[CustomerID] AS [P3/:key], [P3].[CustomerID] AS [P3/ID], [P3].[RagSoc] AS [P3/RagSoc], [P3].[AddressID] AS [P3/AddressID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID]LEFT JOIN [TABCustomers] AS [P3] ON [P3].[CustomerID] = [P2].[CustomerID] WHERE [P1].[CustomerID] = @p0 AND [P2].[OrderNumber] = @p1";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -119,7 +119,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Orders('O24-01')/Customer" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Orders/Customer].[CustomerID] AS [~/Orders/Customer/:key], [~/Orders/Customer].[CustomerID] AS [~/Orders/Customer/ID], [~/Orders/Customer].[RagSoc] AS [~/Orders/Customer/RagSoc], [~/Orders/Customer].[AddressID] AS [~/Orders/Customer/AddressID] FROM [TABOrders] AS [~/Orders] INNER JOIN [TABCustomers] AS [~/Orders/Customer] ON [~/Orders/Customer].[CustomerID] = [~/Orders].[CustomerID] WHERE [~/Orders].[OrderNumber] = @p0";
+            string expected = @"SELECT [P2].[CustomerID] AS [P2/:key], [P2].[CustomerID] AS [P2/ID], [P2].[RagSoc] AS [P2/RagSoc], [P2].[AddressID] AS [P2/AddressID] FROM [TABOrders] AS [P1] LEFT JOIN [TABCustomers] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[OrderNumber] = @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -132,7 +132,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$count" })
                 .ToSQL();
 
-            string expected = @"SELECT COUNT([~/Customers/Orders].[OrderNumber]) AS [count] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0";
+            string expected = @"SELECT COUNT([P2].[OrderNumber]) AS [count] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -145,7 +145,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(Total gt 100)" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/Number], [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[Note] AS [~/Customers/Orders/Note], [~/Customers/Orders].[Total] AS [~/Customers/Orders/Total], [~/Customers/Orders].[CustomerID] AS [~/Customers/Orders/CustomerID] FROM (SELECT [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/Number], [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[Note] AS [~/Customers/Orders/Note], [~/Customers/Orders].[Total] AS [~/Customers/Orders/Total], [~/Customers/Orders].[CustomerID] AS [~/Customers/Orders/CustomerID] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0) AS [~/Customers/Orders] WHERE [~/Customers/Orders].[Total] > @p1";
+            string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM (SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P1] WHERE [P1].[Total] > @p1";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -157,7 +157,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(Total gt 100)/1/OrderDate" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key] FROM (SELECT [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/Number], [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[Note] AS [~/Customers/Orders/Note], [~/Customers/Orders].[Total] AS [~/Customers/Orders/Total], [~/Customers/Orders].[CustomerID] AS [~/Customers/Orders/CustomerID] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0) AS [~/Customers/Orders] WHERE [~/Customers/Orders].[Total] > @p1 AND [~/Customers/Orders].[OrderNumber] = @p2";
+            string expected = @"SELECT [P1].[OrderDate] AS [P1/OrderDate], [P1].[OrderNumber] AS [P1/:key] FROM (SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P1] WHERE [P1].[Total] > @p1 AND [P1].[OrderNumber] = @p2";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -170,7 +170,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(@expr)?@expr=Total gt 100" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/Number], [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[Note] AS [~/Customers/Orders/Note], [~/Customers/Orders].[Total] AS [~/Customers/Orders/Total], [~/Customers/Orders].[CustomerID] AS [~/Customers/Orders/CustomerID] FROM (SELECT [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/:key], [~/Customers/Orders].[OrderNumber] AS [~/Customers/Orders/Number], [~/Customers/Orders].[OrderDate] AS [~/Customers/Orders/OrderDate], [~/Customers/Orders].[Note] AS [~/Customers/Orders/Note], [~/Customers/Orders].[Total] AS [~/Customers/Orders/Total], [~/Customers/Orders].[CustomerID] AS [~/Customers/Orders/CustomerID] FROM [TABCustomers] AS [~/Customers] INNER JOIN [TABOrders] AS [~/Customers/Orders] ON [~/Customers/Orders].[CustomerID] = [~/Customers].[CustomerID] WHERE [~/Customers].[CustomerID] = @p0) AS [~/Customers/Orders] WHERE [~/Customers/Orders].[Total] = @p1";
+            string expected = @"SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[CustomerID] AS [P2/CustomerID] FROM (SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P2] WHERE [P2].[Total] = @p1";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -182,7 +182,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=RagSoc eq 'Acme'" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[RagSoc] = @p0";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[RagSoc] = @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -194,7 +194,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=RagSoc ne 'Acme'" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[RagSoc] <> @p0";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[RagSoc] <> @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -207,7 +207,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID gt 10" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[CustomerID] > @p0";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] > @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -219,7 +219,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID ge 10" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[CustomerID] >= @p0";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] >= @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -231,7 +231,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID lt 10" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[CustomerID] < @p0";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] < @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -243,7 +243,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 10" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE [~/Customers].[CustomerID] <= @p0";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] <= @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -255,7 +255,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID ge 1 and RagSoc eq 'acme'" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE ([~/Customers].[CustomerID] >= @p0 AND [~/Customers].[RagSoc] = @p1)";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] >= @p0 AND [P1].[RagSoc] = @p1)";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -268,7 +268,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID ge 1 and ID le 2 and RagSoc eq 'acme'" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE ([~/Customers].[CustomerID] >= @p0 AND [~/Customers].[CustomerID] <= @p1 AND [~/Customers].[RagSoc] = @p2)";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] >= @p0 AND [P1].[CustomerID] <= @p1 AND [P1].[RagSoc] = @p2)";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -281,7 +281,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 1 or ID ge 2" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE ([~/Customers].[CustomerID] <= @p0 OR [~/Customers].[CustomerID] >= @p1)";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1)";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -294,7 +294,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 1 or ID ge 3 or ID eq 2" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE ([~/Customers].[CustomerID] <= @p0 OR [~/Customers].[CustomerID] >= @p1 OR [~/Customers].[CustomerID] = @p2)";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1 OR [P1].[CustomerID] = @p2)";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -307,7 +307,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=(ID le 1 or ID ge 3) and ID eq 2" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE (([~/Customers].[CustomerID] <= @p0 OR [~/Customers].[CustomerID] >= @p1) AND [~/Customers].[CustomerID] = @p2)";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE (([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1) AND [P1].[CustomerID] = @p2)";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -319,7 +319,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 1 or ID ge 3 and ID eq 2" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE ([~/Customers].[CustomerID] <= @p0 OR ([~/Customers].[CustomerID] >= @p1 AND [~/Customers].[CustomerID] = @p2))";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] <= @p0 OR ([P1].[CustomerID] >= @p1 AND [P1].[CustomerID] = @p2))";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -332,7 +332,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID eq 1 and ID eq 1 or ID eq 1 and ((ID eq 1 or ID eq 1 or ID eq 1) and ID eq 1)" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE (([~/Customers].[CustomerID] = @p0 AND [~/Customers].[CustomerID] = @p1) OR ([~/Customers].[CustomerID] = @p2 AND ([~/Customers].[CustomerID] = @p3 OR [~/Customers].[CustomerID] = @p4 OR [~/Customers].[CustomerID] = @p5) AND [~/Customers].[CustomerID] = @p6))";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE (([P1].[CustomerID] = @p0 AND [P1].[CustomerID] = @p1) OR ([P1].[CustomerID] = @p2 AND ([P1].[CustomerID] = @p3 OR [P1].[CustomerID] = @p4 OR [P1].[CustomerID] = @p5) AND [P1].[CustomerID] = @p6))";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -344,7 +344,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Orders?$filter=Customer/ID eq 1" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Orders].[OrderNumber] AS [~/Orders/:key], [~/Orders].[OrderNumber] AS [~/Orders/Number], [~/Orders].[OrderDate] AS [~/Orders/OrderDate], [~/Orders].[Note] AS [~/Orders/Note], [~/Orders].[Total] AS [~/Orders/Total], [~/Orders].[CustomerID] AS [~/Orders/CustomerID] FROM [TABOrders] AS [~/Orders] INNER JOIN [TABCustomers] AS [~/Orders/Customer] ON [~/Orders/Customer].[CustomerID] = [~/Orders].[CustomerID] WHERE [~/Orders/Customer].[CustomerID] = @p0";
+            string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM [TABOrders] AS [P1] LEFT JOIN [TABCustomers] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P2].[CustomerID] = @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -356,7 +356,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Orders?$filter=Customer/Address/City eq 'New York'" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Orders].[OrderNumber] AS [~/Orders/:key], [~/Orders].[OrderNumber] AS [~/Orders/Number], [~/Orders].[OrderDate] AS [~/Orders/OrderDate], [~/Orders].[Note] AS [~/Orders/Note], [~/Orders].[Total] AS [~/Orders/Total], [~/Orders].[CustomerID] AS [~/Orders/CustomerID] FROM [TABOrders] AS [~/Orders] INNER JOIN [TABCustomers] AS [~/Orders/Customer] ON [~/Orders/Customer].[CustomerID] = [~/Orders].[CustomerID]INNER JOIN [TABAddresses] AS [~/Orders/Customer/Address] ON [~/Orders/Customer/Address].[AddressID] = [~/Orders/Customer].[AddressID] WHERE [~/Orders/Customer/Address].[City] = @p0";
+            string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM [TABOrders] AS [P1] LEFT JOIN [TABCustomers] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID]LEFT JOIN [TABAddresses] AS [P3] ON [P3].[AddressID] = [P2].[AddressID] WHERE [P3].[City] = @p0";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -369,9 +369,40 @@ namespace FStorm.Test
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=Orders/any(x:x/Total gt 100)" })
                 .ToSQL();
 
-            string expected = @"SELECT [~/Customers].[CustomerID] AS [~/Customers/:key], [~/Customers].[CustomerID] AS [~/Customers/ID], [~/Customers].[RagSoc] AS [~/Customers/RagSoc], [~/Customers].[AddressID] AS [~/Customers/AddressID] FROM [TABCustomers] AS [~/Customers] WHERE EXISTS (SELECT 1 FROM [TABOrders] AS [~/Customers/Orders] WHERE [~/Customers/Orders].[OrderNumber] = [~/Customers].[CustomerID] AND [~/Customers/Orders].[Total] > @p0)";
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE EXISTS (SELECT 1 FROM [TABOrders] AS [ANY1] WHERE [ANY1].[CustomerID] = [P1].[CustomerID] AND [ANY1].[Total] > @p0)";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
+
+
+        [Test]
+        public void It_should_filter_collection_any_2()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection() 
+                .Get(new GetRequest() { ResourcePath = "Orders?$filter=DeliveryAddress/Hints/any(x:x/Hint eq 'dangerous dog!')" })
+                .ToSQL();
+
+            string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM [TABOrders] AS [P1] WHERE EXISTS (SELECT 1 FROM [TABAddresses] AS [ANY1] LEFT JOIN [TABAddressHints] AS [ANY2] ON [ANY2].[AddressID] = [ANY1].[AddressID] WHERE [ANY1].[AddressID] = [P1].[DeliveryAddressID] AND [ANY2].[Hint] = @p0)";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+        /*
+        SELECT [P1].[OrderNumber] AS [P1/:key],
+            [P1].[OrderNumber] AS [P1/Number],
+            [P1].[OrderDate] AS [P1/OrderDate],
+            [P1].[Note] AS [P1/Note],
+            [P1].[Total] AS [P1/Total],
+            [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID],
+            [P1].[CustomerID] AS [P1/CustomerID]
+        FROM [TABOrders] AS [P1]
+        LEFT JOIN [TABCustomer] AS [P2]
+        WHERE EXISTS (
+		SELECT 1
+		FROM [TABCustomer]  AS [ANY1]
+        LEFT JOIN [TABOrders] AS [ANY2] ON [ANY2].[CustomerID] = [ANY1].[CustomerID] 
+		WHERE [ANY1].[CustomerID] = [P1].[CustomerID]
+			AND [ANY2].[Total] > @p0
+		)*/
 
     }
 }

@@ -1,7 +1,5 @@
 ﻿using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
-using System.Collections.Generic;
-using System.Net.NetworkInformation;
 
 namespace FStorm
 {
@@ -39,7 +37,7 @@ namespace FStorm
 
         private void SetMainQuery(SqlKata.Query query, AliasStore? aliasStore = null) {
             scope.Clear();
-            scope.Push(new CompilerScope(CompilerScope.MAIN, query, aliasStore));
+            scope.Push(new CompilerScope(CompilerScope.ROOT, query, aliasStore));
         }
         internal SqlKata.Query GetQuery() => ActiveQuery;
         internal ODataPath GetOdataRequestPath() => oDataPath;
@@ -79,9 +77,14 @@ namespace FStorm
         private CompilerScope ActiveScope {get => scope.First(x => x.ScopeType != CompilerScope.NO_SCOPE); }
 
         /// <summary>
-        /// Return the first "query builder" scope containing a from clasue. This may be the MAIN or a suquery actually processing.
+        /// Return the first "query builder" scope containing a from clasue. This may be the ROOT or a suquery actually processing.
         /// </summary>
-        private CompilerScope MainScope {get => scope.First(x => x.ScopeType == CompilerScope.MAIN || x.ScopeType == CompilerScope.ANY); }
+        private CompilerScope MainScope {get => scope.First(x => x.ScopeType == CompilerScope.ROOT || x.ScopeType == CompilerScope.ANY); }
+
+        /// <summary>
+        /// Return the first MAIN 
+        /// </summary>
+        private CompilerScope RootScope {get => scope.First(x => x.ScopeType == CompilerScope.ROOT); }
 
         /// <summary>
         /// Shortcut to access the underlyng query builder of the <see cref="MainScope"/>.
@@ -92,6 +95,8 @@ namespace FStorm
         /// Shortcut to access the underlyng query builder of the <see cref="ActiveScope"/>.
         /// </summary>
         private SqlKata.Query ActiveQuery { get => ActiveScope.Query;}
+
+        private SqlKata.Query RootQuery { get => RootScope.Query;}
 
         /// <summary>
         /// Open an "AND" scope. While in that the where clauses are in AND relation each others 
@@ -175,12 +180,44 @@ namespace FStorm
         internal void OpenAnyScope()
         {
             var anyQ = new SqlKata.Query();
-            var s = new CompilerScope(CompilerScope.ANY, anyQ);
+            var s = new CompilerScope(CompilerScope.ANY, anyQ, new AliasStore("ANY"));
             scope.Push(s);
-            var _currentInScopeVar = this.GetCurrentVariableInScope()!;
             var _it = GetVariablesInScope().First(x => x.Name =="$it");
-            AddFrom(_currentInScopeVar.Type, _currentInScopeVar.ResourcePath);
-            ActiveQuery.WhereColumns($"{_currentInScopeVar.ResourcePath}.{_currentInScopeVar.Type.GetEntityKey().columnName}","=", $"{_it.ResourcePath}.{_it.Type.GetEntityKey().columnName}");
+            var _var = this.GetCurrentVariableInScope()!;
+            var _varElements = _var.ResourcePath.AsEdmElements();
+            var _tail = _var.ResourcePath - _it.ResourcePath;
+            /*
+                ~/t_0/t_1/t_2/t_3/t_4/t_5/t_6
+                |------------var-------------|
+                |--$it---|
+                         |-------tail--------|
+            */
+
+            for (int i = _it.ResourcePath.Count(); i < _varElements.Count(); i++)
+            {
+                if (i == _it.ResourcePath.Count()) 
+                {
+                    EdmNavigationProperty type =(EdmNavigationProperty)_varElements[i].Item2;
+                    AddFrom((EdmEntityType)type.Type.Definition.AsElementType(), _varElements[i].Item1);
+                }
+                else
+                {
+                    EdmNavigationProperty type =(EdmNavigationProperty)_varElements[i].Item2;
+                    AddJoin(type, _varElements[i].Item1 - 1, _varElements[i].Item1);
+                }
+            }
+
+            if (_varElements[_it.ResourcePath.Count()].Item2 is EdmNavigationProperty navigationProperty) 
+            {
+                var (sourceProperty, targetProperty) = navigationProperty.GetRelationProperties();
+                var alias_var = Aliases.AddOrGet(_varElements[_it.ResourcePath.Count()].Item1);
+                var alias_it = RootScope.Aliases.AddOrGet(_it.ResourcePath);
+                ActiveQuery.WhereColumns($"{alias_var}.{targetProperty.columnName}","=", $"{alias_it}.{sourceProperty.columnName}");
+            }
+            else 
+            {
+                throw new ApplicationException("should not pass here!!");
+            }
         }
 
         /// <summary>
@@ -209,10 +246,8 @@ namespace FStorm
             if (Aliases.Contains(leftPath)) return leftPath;
             var r = Aliases.AddOrGet(rightPath);
             var l = Aliases.AddOrGet(leftPath);
-            var constraint = rightNavigationProperty.ReferentialConstraint.PropertyPairs.First();
-            var sourceProperty = (EdmStructuralProperty)constraint.PrincipalProperty;
-            var targetProperty = (EdmStructuralProperty)constraint.DependentProperty;
-            this.MainQuery.Join((rightNavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!.Table + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+            var (sourceProperty, targetProperty) = rightNavigationProperty.GetRelationProperties();
+            this.MainQuery.LeftJoin((rightNavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!.Table + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
             return leftPath;
         }
 
@@ -248,11 +283,9 @@ namespace FStorm
             switch (filter.OperatorKind)
             {
                 case BinaryOperatorKind.Or:
-                    throw new NotImplementedException();
-                    break;
+                    throw new NotImplementedException("should not pass here!");
                 case BinaryOperatorKind.And:
-                    throw new NotImplementedException();
-                    break;
+                    throw new NotImplementedException("should not pass here!");
                 case BinaryOperatorKind.Equal:
                     (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","=", filter.Value);
                     break;
@@ -273,29 +306,23 @@ namespace FStorm
                     break;
                 case BinaryOperatorKind.Add:
                     throw new NotImplementedException();
-                    break;
                 case BinaryOperatorKind.Subtract:
                     throw new NotImplementedException();
-                    break;
                 case BinaryOperatorKind.Multiply:
                     throw new NotImplementedException();
-                    break;
                 case BinaryOperatorKind.Divide:
                     throw new NotImplementedException();
-                    break;
                 case BinaryOperatorKind.Modulo:
                     throw new NotImplementedException();
-                    break;
                 case BinaryOperatorKind.Has:
                     throw new NotImplementedException();
-                    break;
             }
         }
 
 
         internal void WrapQuery(EdmPath resourcePath)
         {
-            if (scope.Count > 1 || scope.Peek().ScopeType != CompilerScope.MAIN) {
+            if (scope.Count > 1 || scope.Peek().ScopeType != CompilerScope.ROOT) {
                 throw new Exception("Cannot wrap query while a sub compiler scope is open or the current scopo is not the main");
             }
 
@@ -319,22 +346,41 @@ namespace FStorm
 
     public class AliasStore
     {
-        private List<EdmPath> Aliases = new List<EdmPath>();
+        private readonly string Prefix;
+
+        private int index = 0;
+
+        public AliasStore() {
+            Prefix = "P";
+        }
+
+        public AliasStore(string Prefix) {
+            this.Prefix = Prefix;
+        }
+
+        private Dictionary<EdmPath, string> aliases = new Dictionary<EdmPath, string>();
+
+        private string ComputeNewAlias(EdmPath path) {
+            index++;
+            return $"{Prefix}{index}";
+        }
 
         public string AddOrGet(EdmPath path) {
-            if (!Contains(path))
-                Aliases.Add(path);
-            return path.ToString();
+            if (!Contains(path)) {
+                var a = ComputeNewAlias(path);
+                aliases.Add(path, a);
+            }
+            return aliases[path];
         }
 
         public bool Contains(EdmPath path) {
-            return Aliases.Contains(path);
+            return aliases.ContainsKey(path);
         }
     }
 
     public class CompilerScope
     {
-        public const string MAIN = "main";
+        public const string ROOT = "main";
         public const string AND = "and";
         public const string OR = "or";
         public const string NO_SCOPE = "noscope";

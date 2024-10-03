@@ -192,14 +192,9 @@ public class SemanticVisitor
             {
                 if (segments[i].Item2 is IEdmNavigationProperty)
                 {
-                    List<string> s = new List<string>();
-                    for (int j = 0; j <= i; j++)
-                    {
-                        s.Add(segments[j].Item1.ToString());
-                    }
                     context.AddJoin((EdmNavigationProperty)segments[i].Item2,
-                        pathFactory.CreatePath(s.ToArray()) - 1,
-                        pathFactory.CreatePath(s.ToArray())
+                        segments[i].Item1 - 1,
+                        segments[i].Item1
                     );
                 }
             }
