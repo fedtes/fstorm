@@ -7,7 +7,9 @@ namespace FStorm.Test
     {
 
         IServiceProvider serviceProvider;
-        //SqliteConnection connection;
+#pragma warning disable NUnit1032 // An IDisposable field/property should be Disposed in a TearDown method
+        SqliteConnection connection;
+#pragma warning restore NUnit1032 // An IDisposable field/property should be Disposed in a TearDown method
 
         [TearDown()]
         public void TearDown()
@@ -22,17 +24,16 @@ namespace FStorm.Test
         [SetUp]
         public void Setup()
         {
-            var sqlCon = new SqliteConnection("Data Source=InMemorySample;Mode=Memory;Cache=Shared");
-            sqlCon.Open();
-            MockModel.CreateDB(sqlCon);
+            connection = new SqliteConnection("Data Source=InMemorySample;Mode=Memory;Cache=Shared");
+            connection.Open();
+            MockModel.CreateDB(connection);
             var services = new ServiceCollection();
             services.AddFStorm(
                 MockModel.PrepareModel(),
                 new FStormOptions()
                 {
                     SQLCompilerType = SQLCompilerType.SQLLite,
-                    ServiceRoot = "https://my.service/odata/",
-                    SQLConnection = sqlCon
+                    ServiceRoot = "https://my.service/odata/"
                 }
             );
             serviceProvider = services.BuildServiceProvider();
@@ -42,7 +43,7 @@ namespace FStorm.Test
         public async Task It_Should_read_entity_collection()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var con = _FStormService.OpenConnection();
+            var con = _FStormService.OpenConnection(connection);
             
             var r = await con.Get(new GetRequest() { ResourcePath = "Customers" }).ToListAsync();
 
@@ -55,7 +56,7 @@ namespace FStorm.Test
         public async Task It_Should_read_entity_single()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var con = _FStormService.OpenConnection();
+            var con = _FStormService.OpenConnection(connection);
 
             var r = await con.Get(new GetRequest() { ResourcePath = "Customers(1)" }).ToListAsync();
 
@@ -68,7 +69,7 @@ namespace FStorm.Test
         public async Task It_Should_read_entity_property()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var con = _FStormService.OpenConnection();
+            var con = _FStormService.OpenConnection(connection);
 
             var r = await con.Get(new GetRequest() { ResourcePath = "Customers(1)/RagSoc" }).ToListAsync();
 
@@ -82,7 +83,7 @@ namespace FStorm.Test
         public async Task It_Should_count_collection()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var con = _FStormService.OpenConnection();
+            var con = _FStormService.OpenConnection(connection);
 
             var r = await con.Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$count" }).ToListAsync();
 

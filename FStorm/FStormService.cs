@@ -30,8 +30,6 @@ namespace FStorm
 
         public string ServiceRoot { get; set; }
 
-        public DbConnection? SQLConnection { get; set; }
-
         public FStormOptions()
         {
             ServiceRoot = "http://localhost/";
@@ -53,18 +51,18 @@ namespace FStorm
         public EdmModel Model { get; }
         public Uri ServiceRoot { get; }
 
-        public Connection OpenConnection()
+        public Connection OpenConnection(DbConnection SQLConnection)
         {
             var con = serviceProvider.GetService<Connection>()!;
-            con.connection = this.options.SQLConnection!;
+            con.connection = SQLConnection!;
             con.Open();
             return con;
         }
 
-        public async Task<Connection> OpenConnectionAsync()
+        public async Task<Connection> OpenConnectionAsync(DbConnection SQLConnection)
         {
             var con = serviceProvider.GetService<Connection>()!;
-            con.connection = this.options.SQLConnection!;
+            con.connection = SQLConnection;
             await con.OpenAsync();
             return con;
         }

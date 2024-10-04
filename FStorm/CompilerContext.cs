@@ -79,7 +79,7 @@ namespace FStorm
         /// <summary>
         /// Return the first "query builder" scope containing a from clasue. This may be the ROOT or a suquery actually processing.
         /// </summary>
-        private CompilerScope MainScope {get => scope.First(x => x.ScopeType == CompilerScope.ROOT || x.ScopeType == CompilerScope.ANY); }
+        private CompilerScope MainScope {get => scope.First(x => x.ScopeType == CompilerScope.ROOT || x.ScopeType == CompilerScope.ANY  || x.ScopeType == CompilerScope.ALL); }
 
         /// <summary>
         /// Return the first MAIN 
@@ -156,6 +156,22 @@ namespace FStorm
         }
 
         /// <summary>
+        /// Open an "NOT" scope. While in that the "where" clauses are wrapped around NOT 
+        /// </summary>
+        internal void OpenNotScope() {
+            scope.Push(new CompilerScope(CompilerScope.NOT,new SqlKata.Query()));
+        }
+
+        /// <summary>
+        /// Close the current NOT scope
+        /// </summary>
+        internal void CloseNotScope() {
+            var s = scope.Pop();
+            (IsOr ? ActiveQuery.Or() : ActiveQuery).Not().Where(_q => s.Query);
+        }
+
+
+        /// <summary>
         /// Open a variable scope by pushing a variable into the current context. Variable are visibile from all "children" scope opened from here.
         /// </summary>
         /// <param name="variable"></param>
@@ -182,39 +198,17 @@ namespace FStorm
             var anyQ = new SqlKata.Query();
             var s = new CompilerScope(CompilerScope.ANY, anyQ, new AliasStore("ANY"));
             scope.Push(s);
-            var _it = GetVariablesInScope().First(x => x.Name =="$it");
-            var _var = this.GetCurrentVariableInScope()!;
-            var _varElements = _var.ResourcePath.AsEdmElements();
-            var _tail = _var.ResourcePath - _it.ResourcePath;
-            /*
-                ~/t_0/t_1/t_2/t_3/t_4/t_5/t_6
-                |------------var-------------|
-                |--$it---|
-                         |-------tail--------|
-            */
+            Variable _it  = GetVariablesInScope().First(x => x.Name == "$it");
+            var subQueryRoot= CreateSubQuery(_it);
 
-            for (int i = _it.ResourcePath.Count(); i < _varElements.Count(); i++)
-            {
-                if (i == _it.ResourcePath.Count()) 
-                {
-                    EdmNavigationProperty type =(EdmNavigationProperty)_varElements[i].Item2;
-                    AddFrom((EdmEntityType)type.Type.Definition.AsElementType(), _varElements[i].Item1);
-                }
-                else
-                {
-                    EdmNavigationProperty type =(EdmNavigationProperty)_varElements[i].Item2;
-                    AddJoin(type, _varElements[i].Item1 - 1, _varElements[i].Item1);
-                }
-            }
-
-            if (_varElements[_it.ResourcePath.Count()].Item2 is EdmNavigationProperty navigationProperty) 
+            if (subQueryRoot.Item2 is EdmNavigationProperty navigationProperty)
             {
                 var (sourceProperty, targetProperty) = navigationProperty.GetRelationProperties();
-                var alias_var = Aliases.AddOrGet(_varElements[_it.ResourcePath.Count()].Item1);
+                var alias_var = Aliases.AddOrGet(subQueryRoot.Item1);
                 var alias_it = RootScope.Aliases.AddOrGet(_it.ResourcePath);
-                ActiveQuery.WhereColumns($"{alias_var}.{targetProperty.columnName}","=", $"{alias_it}.{sourceProperty.columnName}");
+                ActiveQuery.WhereColumns($"{alias_var}.{targetProperty.columnName}", "=", $"{alias_it}.{sourceProperty.columnName}");
             }
-            else 
+            else
             {
                 throw new ApplicationException("should not pass here!!");
             }
@@ -230,6 +224,44 @@ namespace FStorm
             if (s.ScopeType != CompilerScope.ANY)  throw new ApplicationException("Should not pass here!!");
             (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereExists(s.Query);
         }
+
+
+        /// <summary>
+        /// Open a scope where handling the ALL operator. This open a sub-query where all operations are perfomed until the scope is closed.
+        /// </summary>
+        internal void OpenAllScope()
+        {
+            var anyQ = new SqlKata.Query();
+            var s = new CompilerScope(CompilerScope.ALL, anyQ, new AliasStore("ALL"));
+            scope.Push(s);
+            Variable _it  = GetVariablesInScope().First(x => x.Name == "$it");
+            var subQueryRoot= CreateSubQuery(_it);
+
+            if (subQueryRoot.Item2 is EdmNavigationProperty navigationProperty)
+            {
+                var (sourceProperty, targetProperty) = navigationProperty.GetRelationProperties();
+                var alias_var = Aliases.AddOrGet(subQueryRoot.Item1);
+                var alias_it = RootScope.Aliases.AddOrGet(_it.ResourcePath);
+                ActiveQuery.WhereColumns($"{alias_var}.{targetProperty.columnName}", "=", $"{alias_it}.{sourceProperty.columnName}");
+            }
+            else
+            {
+                throw new ApplicationException("should not pass here!!");
+            }
+        }
+
+        /// <summary>
+        /// Close the current ALL scope and link the resutl to the main query.
+        /// </summary>
+        /// <exception cref="ApplicationException"></exception>
+        internal void CloseAllScope()
+        {
+            var s = scope.Pop();
+            if (s.ScopeType != CompilerScope.ALL)  throw new ApplicationException("Should not pass here!!");
+            (IsOr ? ActiveQuery.Or() : ActiveQuery).Not().WhereExists(s.Query);
+        }
+
+
 
 #endregion
 
@@ -334,6 +366,40 @@ namespace FStorm
 
         #endregion
 
+
+#region "private"
+
+        private (EdmPath, IEdmElement) CreateSubQuery(Variable _it)
+        {
+            var _var = this.GetCurrentVariableInScope()!;
+            var _varElements = _var.ResourcePath.AsEdmElements();
+            var _tail = _var.ResourcePath - _it.ResourcePath;
+            /*
+                ~/t_0/t_1/t_2/t_3/t_4/t_5/t_6
+                |------------var-------------|
+                |--$it---|
+                         |-------tail--------|
+            */
+
+            for (int i = _it.ResourcePath.Count(); i < _varElements.Count(); i++)
+            {
+                if (i == _it.ResourcePath.Count())
+                {
+                    EdmNavigationProperty type = (EdmNavigationProperty)_varElements[i].Item2;
+                    AddFrom((EdmEntityType)type.Type.Definition.AsElementType(), _varElements[i].Item1);
+                }
+                else
+                {
+                    EdmNavigationProperty type = (EdmNavigationProperty)_varElements[i].Item2;
+                    AddJoin(type, _varElements[i].Item1 - 1, _varElements[i].Item1);
+                }
+            }
+
+            return _varElements[_it.ResourcePath.Count()];
+        }
+
+#endregion
+
     }
 
     public enum OutputKind
@@ -382,10 +448,12 @@ namespace FStorm
     {
         public const string ROOT = "main";
         public const string AND = "and";
+        public const string NOT = "not";
         public const string OR = "or";
         public const string NO_SCOPE = "noscope";
         public const string VARIABLE = "var";
         public const string ANY = "any";
+        public const string ALL = "all";
 
         public readonly SqlKata.Query Query;
         public readonly string ScopeType;

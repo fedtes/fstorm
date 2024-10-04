@@ -141,6 +141,8 @@ public class SemanticVisitor
                 return VisitExpression(context, node.Source, variable);
             case AnyNode node:
                 return VisitAnyNode(context, node);
+            case AllNode node:
+                return VisitAllNode(context, node);
             default:
                 throw new NotImplementedException();
         }
@@ -224,6 +226,23 @@ public class SemanticVisitor
         context.OpenAnyScope();
         VisitExpression(context, node.Body);
         context.CloseAnyScope();
+        context.CloseVariableScope();
+        return new ExpressionValue();
+    }
+
+    private ExpressionValue? VisitAllNode(CompilerContext context, AllNode node)
+    {
+        Variable v = new Variable() {
+            Name = node.CurrentRangeVariable.Name,
+            ResourcePath = pathFactory.CreatePath((node.CurrentRangeVariable as ResourceRangeVariable)!.NavigationSource.Path.PathSegments.ToArray()),
+            Type = node.CurrentRangeVariable.TypeReference.ToStructuredType().EnsureType(service),
+        };
+        context.OpenVariableScope(v);
+        context.OpenAllScope();
+        context.OpenNotScope();
+        VisitExpression(context, node.Body);
+        context.CloseNotScope();
+        context.CloseAllScope();
         context.CloseVariableScope();
         return new ExpressionValue();
     }

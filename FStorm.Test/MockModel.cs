@@ -1,4 +1,6 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using System.Data;
+using System.Data.Common;
+using Microsoft.Data.Sqlite;
 using Microsoft.OData.Edm;
 
 namespace FStorm.Test
@@ -92,5 +94,57 @@ namespace FStorm.Test
             cmd2.ExecuteNonQuery();
             t2.Commit();
         }
+
+
+        
+    }
+
+    public class FakeConnection : DbConnection
+    {
+        public override string ConnectionString { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+        public override string Database => throw new NotImplementedException();
+
+        public override string DataSource => throw new NotImplementedException();
+
+        public override string ServerVersion => throw new NotImplementedException();
+
+        public override ConnectionState State => throw new NotImplementedException();
+
+        public override void ChangeDatabase(string databaseName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Close()
+        {
+        }
+
+        public override void Open()
+        {
+        }
+
+        protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
+        {
+            return new FakeTransaction();
+        }
+
+        protected override DbCommand CreateDbCommand()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class FakeTransaction : DbTransaction
+    {
+        public override IsolationLevel IsolationLevel => throw new NotImplementedException();
+
+        protected override DbConnection? DbConnection => throw new NotImplementedException();
+
+        public override void Commit()
+        {        }
+
+        public override void Rollback()
+        {        }
     }
 }

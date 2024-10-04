@@ -18,7 +18,7 @@ namespace FStorm.Test
         public void Setup()
         {
             var services = new ServiceCollection();
-            services.AddFStorm(MockModel.PrepareModel(), new FStormOptions() { SQLCompilerType= SQLCompilerType.MSSQL , ServiceRoot= "https://my.service/odata/", SQLConnection= new SqliteConnection() });
+            services.AddFStorm(MockModel.PrepareModel(), new FStormOptions() { SQLCompilerType= SQLCompilerType.MSSQL , ServiceRoot= "https://my.service/odata/"});
             serviceProvider = services.BuildServiceProvider();
         }
 
@@ -28,7 +28,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService
-                .OpenConnection()
+                .OpenConnection(new FakeConnection())
                 .Get(new GetRequest() { ResourcePath = "Customers" })
                 .ToSQL();
 
@@ -41,7 +41,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService
-                .OpenConnection()
+                .OpenConnection(new FakeConnection())
                 .Get(new GetRequest() { ResourcePath = "Customers(1)" })
                 .ToSQL();
 
@@ -53,7 +53,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_structural_property()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection()
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/RagSoc" })
                 .ToSQL();
 
@@ -66,7 +66,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_n_cardinality()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection()
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders" })
                 .ToSQL();
 
@@ -78,7 +78,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_n_cardinality_with_id()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection()
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')" })
                 .ToSQL();
 
@@ -90,7 +90,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_n_cardinality_with_id_to_structured_prop()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection()
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')/OrderDate" })
                 .ToSQL();
 
@@ -102,7 +102,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_n_cardinality_with_id_to_nav_prop()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection()
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')/Customer" })
                 .ToSQL();
 
@@ -115,7 +115,7 @@ namespace FStorm.Test
         public void It_should_parse_path_to_nav_prop_1_cardinality()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Orders('O24-01')/Customer" })
                 .ToSQL();
 
@@ -128,7 +128,7 @@ namespace FStorm.Test
         public void It_should_count()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$count" })
                 .ToSQL();
 
@@ -141,7 +141,7 @@ namespace FStorm.Test
         public void It_should_address_subset_of_collecton_1()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(Total gt 100)" })
                 .ToSQL();
 
@@ -153,7 +153,7 @@ namespace FStorm.Test
         public void It_should_address_property_of_subset_of_collecton()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(Total gt 100)/1/OrderDate" })
                 .ToSQL();
 
@@ -166,7 +166,7 @@ namespace FStorm.Test
         public void It_should_address_subset_of_collecton_2()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(@expr)?@expr=Total gt 100" })
                 .ToSQL();
 
@@ -178,7 +178,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_eq()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=RagSoc eq 'Acme'" })
                 .ToSQL();
 
@@ -190,7 +190,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_ne()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=RagSoc ne 'Acme'" })
                 .ToSQL();
 
@@ -203,7 +203,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_gt()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID gt 10" })
                 .ToSQL();
 
@@ -215,7 +215,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_ge()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID ge 10" })
                 .ToSQL();
 
@@ -227,7 +227,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_lt()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID lt 10" })
                 .ToSQL();
 
@@ -239,7 +239,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_le()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 10" })
                 .ToSQL();
 
@@ -251,7 +251,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_and()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID ge 1 and RagSoc eq 'acme'" })
                 .ToSQL();
 
@@ -264,7 +264,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_and_2()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID ge 1 and ID le 2 and RagSoc eq 'acme'" })
                 .ToSQL();
 
@@ -277,7 +277,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_or()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 1 or ID ge 2" })
                 .ToSQL();
 
@@ -290,7 +290,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_or_2()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 1 or ID ge 3 or ID eq 2" })
                 .ToSQL();
 
@@ -303,7 +303,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_or_and()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=(ID le 1 or ID ge 3) and ID eq 2" })
                 .ToSQL();
 
@@ -315,7 +315,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_or_and_2()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 1 or ID ge 3 and ID eq 2" })
                 .ToSQL();
 
@@ -328,7 +328,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_or_and_3()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID eq 1 and ID eq 1 or ID eq 1 and ((ID eq 1 or ID eq 1 or ID eq 1) and ID eq 1)" })
                 .ToSQL();
 
@@ -340,7 +340,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_on_nav_prop_1()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Orders?$filter=Customer/ID eq 1" })
                 .ToSQL();
 
@@ -352,7 +352,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_on_nav_prop_2()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Orders?$filter=Customer/Address/City eq 'New York'" })
                 .ToSQL();
 
@@ -365,7 +365,7 @@ namespace FStorm.Test
         public void It_should_filter_collection_any()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Customers?$filter=Orders/any(x:x/Total gt 100)" })
                 .ToSQL();
 
@@ -378,11 +378,37 @@ namespace FStorm.Test
         public void It_should_filter_collection_any_2()
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection() 
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
                 .Get(new GetRequest() { ResourcePath = "Orders?$filter=DeliveryAddress/Hints/any(x:x/Hint eq 'dangerous dog!')" })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM [TABOrders] AS [P1] WHERE EXISTS (SELECT 1 FROM [TABAddresses] AS [ANY1] LEFT JOIN [TABAddressHints] AS [ANY2] ON [ANY2].[AddressID] = [ANY1].[AddressID] WHERE [ANY1].[AddressID] = [P1].[DeliveryAddressID] AND [ANY2].[Hint] = @p0)";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+
+        [Test]
+        public void It_should_filter_collection_all()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
+                .Get(new GetRequest() { ResourcePath = "Customers?$filter=Orders/all(x:x/Total gt 100)" })
+                .ToSQL();
+
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE NOT EXISTS (SELECT 1 FROM [TABOrders] AS [ALL1] WHERE [ALL1].[CustomerID] = [P1].[CustomerID] AND NOT ([ALL1].[Total] > @p0))";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+
+        [Test]
+        public void It_should_filter_collection_all_2()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
+                .Get(new GetRequest() { ResourcePath = "Customers?$filter=Orders/all(x:x/Total gt 100 and x/Total lt 200)" })
+                .ToSQL();
+
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE NOT EXISTS (SELECT 1 FROM [TABOrders] AS [ALL1] WHERE [ALL1].[CustomerID] = [P1].[CustomerID] AND NOT (([ALL1].[Total] > @p0 AND [ALL1].[Total] < @p1)))";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 

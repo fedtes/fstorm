@@ -20,7 +20,7 @@ public class TestResults
     public void Setup()
     {
         var services = new ServiceCollection();
-        services.AddFStorm(MockModel.PrepareModel(), new FStormOptions() { SQLCompilerType= SQLCompilerType.MSSQL , ServiceRoot= "https://my.service/odata/", SQLConnection= null });
+        services.AddFStorm(MockModel.PrepareModel(), new FStormOptions() { SQLCompilerType= SQLCompilerType.MSSQL , ServiceRoot= "https://my.service/odata/"});
         serviceProvider = services.BuildServiceProvider();
     }
 
