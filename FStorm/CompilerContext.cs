@@ -22,16 +22,19 @@ namespace FStorm
         private EdmEntityType? resourceEdmType;
         private ODataPath oDataPath;
         private FilterClause filter;
+        private SelectExpandClause selectExpand;
 
-        public CompilerContext(ODataPath oDataPath, FilterClause filter) {
+        public CompilerContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand) {
             this.oDataPath= oDataPath;
             this.filter = filter;
+            this.selectExpand = selectExpand;
             SetMainQuery(new SqlKata.Query());
         }
 
-        public CompilerContext(ODataPath oDataPath, FilterClause filter, SqlKata.Query query) {
+        public CompilerContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, SqlKata.Query query) {
             this.oDataPath= oDataPath;
             this.filter = filter;
+            this.selectExpand = selectExpand;
             SetMainQuery(query);
         }
 
@@ -42,6 +45,7 @@ namespace FStorm
         internal SqlKata.Query GetQuery() => ActiveQuery;
         internal ODataPath GetOdataRequestPath() => oDataPath;
         internal FilterClause GetFilterClause() => filter;
+        internal SelectExpandClause GetSelectAndExpand() => selectExpand;
         internal OutputKind GetOutputKind() => outputKind;
         internal void SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
         internal EdmPath GetOutputPath() => resourcePath;
@@ -348,6 +352,15 @@ namespace FStorm
                     throw new NotImplementedException();
                 case BinaryOperatorKind.Has:
                     throw new NotImplementedException();
+                case (BinaryOperatorKind)14: //startswith
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{p}.{filter.PropertyReference.Property.columnName}", $"{filter.Value}%", true);
+                    break;
+                case (BinaryOperatorKind)15: //endswith
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{p}.{filter.PropertyReference.Property.columnName}", $"%{filter.Value}", true);
+                    break;
+                case (BinaryOperatorKind)16: //contains
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{p}.{filter.PropertyReference.Property.columnName}", $"%{filter.Value}%", true);
+                    break;
             }
         }
 
@@ -359,7 +372,7 @@ namespace FStorm
             }
 
             this.AddSelectAuto();
-            CompilerContext tmpctx = new CompilerContext(this.GetOdataRequestPath(), filter);
+            CompilerContext tmpctx = new CompilerContext(this.GetOdataRequestPath(), filter, selectExpand);
             var p = tmpctx.Aliases.AddOrGet(resourcePath);
             SetMainQuery(tmpctx.ActiveQuery.From(this.ActiveQuery, p), tmpctx.Aliases);
         }

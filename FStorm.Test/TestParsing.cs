@@ -412,23 +412,111 @@ namespace FStorm.Test
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
+
+        [Test]
+        [TestCase("contains(RagSoc,'acme')","%acme%")]
+        [TestCase("endswith(RagSoc,'acme')","%acme")]
+        [TestCase("startswith(RagSoc,'acme')","acme%")]
+        public void It_should_filter_using_like(string filter,string p0)
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
+                .Get(new GetRequest() { ResourcePath = "Customers?$filter=" + filter })
+                .ToSQL();
+
+            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[RagSoc] like @p0";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+            Assert.That(_SqlQuery.Bindings["@p0"], Is.EqualTo(p0));
+        }
+
+
+        [Test]
+        public void It_should_select()
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
+                .Get(new GetRequest() { ResourcePath = "Customers?$select=RagSoc" })
+                .ToSQL();
+
+            string expected = @"SELECT [P1].[RagSoc] AS [P1/RagSoc], [P1].[CustomerID] AS [P1/:key] FROM [TABCustomers] AS [P1]";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+
         /*
-        SELECT [P1].[OrderNumber] AS [P1/:key],
-            [P1].[OrderNumber] AS [P1/Number],
-            [P1].[OrderDate] AS [P1/OrderDate],
-            [P1].[Note] AS [P1/Note],
-            [P1].[Total] AS [P1/Total],
-            [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID],
-            [P1].[CustomerID] AS [P1/CustomerID]
-        FROM [TABOrders] AS [P1]
-        LEFT JOIN [TABCustomer] AS [P2]
-        WHERE EXISTS (
-		SELECT 1
-		FROM [TABCustomer]  AS [ANY1]
-        LEFT JOIN [TABOrders] AS [ANY2] ON [ANY2].[CustomerID] = [ANY1].[CustomerID] 
-		WHERE [ANY1].[CustomerID] = [P1].[CustomerID]
-			AND [ANY2].[Total] > @p0
-		)*/
+        String and Collection Functions
+
+
+contains    contains
+endswith    endswith(CompanyName,'Futterkiste')
+startswith  startswith(CompanyName,’Alfr’)
+now StartTime ge now()
+
+indexof     indexof(CompanyName,'lfreds') eq 1
+length      length(CompanyName) eq 19
+substring   substring(CompanyName,1) eq 'lfreds Futterkiste'
+
+Collection Functions
+
+hassubset   hassubset([4,1,3],[3,1])
+hassubsequence hassubsequence([4,1,3,1],[1,1])
+String Functions
+
+matchesPattern  matchesPattern(CompanyName,'%5EA.*e$')
+
+tolower     tolower(CompanyName) eq 'alfreds futterkiste'
+
+toupper     toupper(CompanyName) eq 'ALFREDS FUTTERKISTE'
+
+trim        trim(CompanyName) eq 'Alfreds Futterkiste'
+
+Date and Time Functions
+
+day         day(StartTime) eq 8
+
+date        date(StartTime) ne date(EndTime)
+
+fractionalseconds   second(StartTime) eq 0
+
+hour    hour(StartTime) eq 1
+
+maxdatetime EndTime eq maxdatetime()
+
+mindatetime StartTime eq mindatetime()
+
+minute  minute(StartTime) eq 0
+
+month   month(BirthDate) eq 12
+
+
+second  second(StartTime) eq 0
+
+time    time(StartTime) le StartOfDay
+
+totaloffsetminutes  totaloffsetminutes(StartTime) eq 60
+
+totalseconds    totalseconds(duration'PT1M') eq 60
+
+year    year(BirthDate) eq 0
+
+Arithmetic Functions
+
+ceiling ceiling(Freight) eq 33
+
+floor   floor(Freight) eq 32
+
+round   round(Freight) eq 32
+
+Type Functions
+
+cast    cast(ShipCountry,Edm.String)
+
+isof    isof(NorthwindModel.Order)
+
+isof    isof(ShipCountry,Edm.String)
+
+
+        */
 
     }
 }

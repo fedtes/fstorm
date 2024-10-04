@@ -122,6 +122,24 @@ public class SemanticVisitor
         }
     }
 
+    internal void VisitSelectAndExpand(CompilerContext context, SelectExpandClause selectExpandClause)
+    {
+        foreach (var item in selectExpandClause.SelectedItems)
+        {
+            switch (item)
+            {
+                case PathSelectItem i:
+                    VisitPath(context, i.SelectedPath);
+                    break;
+                case ExpandedNavigationSelectItem i:
+                    break;
+                case WildcardSelectItem i:
+                    break;
+            }
+        }
+    }
+
+
 
     public ExpressionValue? VisitExpression(CompilerContext context, SingleValueNode singleValueNode, RangeVariable? variable = null) 
     {
@@ -143,9 +161,28 @@ public class SemanticVisitor
                 return VisitAnyNode(context, node);
             case AllNode node:
                 return VisitAllNode(context, node);
+            case UnaryOperatorNode node:
+                return VisitNotNode(context, node);
+            case InNode node:
+                throw new NotImplementedException();
+            case SingleValueFunctionCallNode node:
+                return VisitSingleValueFunctionCallNode(context, node);
             default:
                 throw new NotImplementedException();
         }
+    }
+
+    private ExpressionValue? VisitNotNode(CompilerContext context, UnaryOperatorNode node)
+    {
+        if (node.OperatorKind == UnaryOperatorKind.Not) {
+            context.OpenNotScope();
+            VisitExpression(context, node.Operand);
+            context.CloseNotScope();
+        } 
+        else{
+            throw new NotImplementedException();
+        }
+        return new ExpressionValue();
     }
 
     public ExpressionValue? VisitBinaryOperator(CompilerContext context, BinaryOperatorNode node)
@@ -266,8 +303,34 @@ public class SemanticVisitor
     public void VisitSingleValueCastNode(CompilerContext context, SingleValueCastNode node) {
         throw new NotImplementedException();
     }
-    public void VisitSingleValueFunctionCallNode(CompilerContext context, SingleValueFunctionCallNode node) {
-        throw new NotImplementedException();
+    public ExpressionValue? VisitSingleValueFunctionCallNode(CompilerContext context, SingleValueFunctionCallNode node) {
+        switch (node.Name.ToLowerInvariant())
+        {
+            case "contains":
+                context.AddFilter(new BinaryFilter() {
+                    PropertyReference = (PropertyReference)VisitExpression(context, (SingleValueNode)node.Parameters.First())!,
+                    OperatorKind = (BinaryOperatorKind)16,
+                    Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last())! as ConstantValue)!.Value!
+                });
+                break;
+            case "endswith":
+                context.AddFilter(new BinaryFilter() {
+                    PropertyReference = (PropertyReference)VisitExpression(context, (SingleValueNode)node.Parameters.First())!,
+                    OperatorKind = (BinaryOperatorKind)15,
+                    Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last()) as ConstantValue).Value
+                });
+                break;
+            case "startswith":
+                context.AddFilter(new BinaryFilter() {
+                    PropertyReference = (PropertyReference)VisitExpression(context, (SingleValueNode)node.Parameters.First())!,
+                    OperatorKind = (BinaryOperatorKind)14,
+                    Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last()) as ConstantValue).Value
+                });
+                break;
+            default:
+                throw new NotImplementedException();
+        }
+        return new ExpressionValue();
     }
     public void VisitSingleValueOpenPropertyAccessNode(CompilerContext context, SingleValueOpenPropertyAccessNode node) {
         throw new NotImplementedException();
@@ -288,6 +351,7 @@ public class SemanticVisitor
     {
         return context.GetVariablesInScope().First(x => x.Name == node.Name);
     }
+
 
 
     /* 

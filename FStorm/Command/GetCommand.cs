@@ -41,9 +41,10 @@ namespace FStorm
         public override SQLCompiledQuery ToSQL()
         {
             ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.ResourcePath, UriKind.Relative));
-            var context = new CompilerContext(parser.ParsePath(), parser.ParseFilter());
+            var context = new CompilerContext(parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand());
             visitor.VisitPath(context, context.GetOdataRequestPath());
             visitor.VisitFilterClause(context, context.GetFilterClause());
+            visitor.VisitSelectAndExpand(context, context.GetSelectAndExpand());
             context.AddSelectAuto();
             //context = compiler.AddGet(context, Configuration);
             return Compile(context);
