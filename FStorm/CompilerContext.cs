@@ -300,10 +300,14 @@ namespace FStorm
 
             if (this.GetOutputKind() == OutputKind.Collection || this.GetOutputKind() == OutputKind.Object)
             {
-                foreach (var property in this.GetOutputType().DeclaredStructuralProperties())
-                {
-                    this.AddSelect(this.GetOutputPath(), (EdmStructuralProperty)property);
-                }
+                AddSelectAll(this.GetOutputType()!);
+            }
+        }
+
+        internal void AddSelectAll(EdmEntityType type) {
+            foreach (var property in type.DeclaredStructuralProperties())
+            {
+                this.AddSelect(this.GetOutputPath(), (EdmStructuralProperty)property);
             }
         }
 

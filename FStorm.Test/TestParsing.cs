@@ -431,14 +431,17 @@ namespace FStorm.Test
 
 
         [Test]
-        public void It_should_select()
+        [TestCase("RagSoc","[P1].[RagSoc] AS [P1/RagSoc], [P1].[CustomerID] AS [P1/:key]")]
+        [TestCase("RagSoc, AddressID","[P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID], [P1].[CustomerID] AS [P1/:key]")]
+        [TestCase("*","[P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID], [P1].[CustomerID] AS [P1/:key]")]
+        public void It_should_select(string input, string select)
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$select=RagSoc" })
+                .Get(new GetRequest() { ResourcePath = "Customers?$select=" + input })
                 .ToSQL();
 
-            string expected = @"SELECT [P1].[RagSoc] AS [P1/RagSoc], [P1].[CustomerID] AS [P1/:key] FROM [TABCustomers] AS [P1]";
+            string expected = @$"SELECT {select} FROM [TABCustomers] AS [P1]";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 

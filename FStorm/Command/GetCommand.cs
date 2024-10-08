@@ -44,8 +44,19 @@ namespace FStorm
             var context = new CompilerContext(parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand());
             visitor.VisitPath(context, context.GetOdataRequestPath());
             visitor.VisitFilterClause(context, context.GetFilterClause());
+            
+            OutputKind outputKind = context.GetOdataRequestPath().LastSegment switch {
+                EntitySetSegment _ => OutputKind.Collection,
+                NavigationPropertySegment s => s.EdmType.TypeKind == EdmTypeKind.Collection ? OutputKind.Collection : OutputKind.Object,
+                KeySegment _ => OutputKind.Object,
+                PropertySegment _ => OutputKind.Property,
+                CountSegment _ => OutputKind.RawValue,
+                _ => OutputKind.Collection
+            };
+
+            context.SetOutputKind(outputKind);
             visitor.VisitSelectAndExpand(context, context.GetSelectAndExpand());
-            context.AddSelectAuto();
+            
             //context = compiler.AddGet(context, Configuration);
             return Compile(context);
         }

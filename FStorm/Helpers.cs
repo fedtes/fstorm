@@ -53,6 +53,16 @@ namespace FStorm
             }
         }
 
+        /// <summary>
+        /// Use in conjunction with <see cref="EdmPath.AsEdmElements"/> to retrive the underline type of an element.
+        /// </summary>
+        /// <param name="x"></param>
+        /// <returns></returns>
+        public static EdmEntityType GetEntityType(this IEdmElement x)
+        {
+            return x is EdmNavigationProperty n ? (EdmEntityType)n.Type.Definition.AsElementType() : (EdmEntityType)(x as IEdmEntitySet)!.EntityType.AsElementType();
+        }
+
         public static (EdmStructuralProperty sourceProperty, EdmStructuralProperty targetProperty) GetRelationProperties(this EdmNavigationProperty property) {
             var constraint = property.ReferentialConstraint.PropertyPairs.First();
             return ((EdmStructuralProperty)constraint.PrincipalProperty, (EdmStructuralProperty)constraint.DependentProperty);

@@ -16,57 +16,64 @@ public class SemanticVisitor
 
     public void VisitPath(CompilerContext context, ODataPath oDataPath) 
     {
+        EdmPath current =null!;
         for (int i = 0; i < oDataPath.Count; i++)
         {
             switch (oDataPath[i])
             {
                 case EntitySetSegment segment:
-                    VisitEntitySetSegment(context, segment);
+                    current = VisitEntitySetSegment(context, segment);
                     break;
                 case NavigationPropertySegment segment:
-                    VisitNavigationPropertySegment(context, segment);
+                    current = VisitNavigationPropertySegment(context, segment, current);
                     break;
                 case KeySegment segment:
-                    VisitKeySegment(context, segment);
+                    current = VisitKeySegment(context, segment, current);
                     break;
                 case PropertySegment segment:
-                    VisitPropertySegment(context, segment);
+                    current = VisitPropertySegment(context, segment, current);
                     break;
                 case CountSegment segment:
-                    VisitCountSegment(context, segment);
+                    current = VisitCountSegment(context, segment, current);
                     break;
                 case FilterSegment segment:
-                    VisitFilterSegment(context, segment);
+                    current = VisitFilterSegment(context, segment, current);
                     break;
                 default:
                     throw new NotImplementedException();
             }
         }
+
+        context.SetOutputPath(current);
+        var x = current.AsEdmElements().Last();
+        context.SetOutputType(x.Item2.GetEntityType());
     }
 
-    public void VisitEntitySetSegment(CompilerContext context, EntitySetSegment entitySetSegment) 
+    public EdmPath VisitEntitySetSegment(CompilerContext context, EntitySetSegment entitySetSegment) 
     {
         EdmPath alias = context.AddFrom((EdmEntityType)entitySetSegment.EdmType.AsElementType(), pathFactory.ParseString(EdmPath.PATH_ROOT + "/" + entitySetSegment.Identifier));
-        context.SetOutputKind(OutputKind.Collection);
-        context.SetOutputType((EdmEntityType)entitySetSegment.EdmType.AsElementType());
-        context.SetOutputPath(alias);
+        //context.SetOutputKind(OutputKind.Collection);
+        //context.SetOutputType((EdmEntityType)entitySetSegment.EdmType.AsElementType());
+        //context.SetOutputPath(alias);
+        return alias;
     }
 
-    public void VisitNavigationPropertySegment(CompilerContext context, NavigationPropertySegment navigationPropertySegment) 
+    public EdmPath VisitNavigationPropertySegment(CompilerContext context, NavigationPropertySegment navigationPropertySegment, EdmPath currentPath) 
     {
 
         EdmPath alias = context.AddJoin(
             (EdmNavigationProperty)navigationPropertySegment.NavigationProperty,
-            context.GetOutputPath(),
-            context.GetOutputPath() + navigationPropertySegment.NavigationProperty.Name
+            currentPath,
+            currentPath + navigationPropertySegment.NavigationProperty.Name
         );
 
-        context.SetOutputKind(navigationPropertySegment.EdmType.TypeKind == EdmTypeKind.Collection ? OutputKind.Collection : OutputKind.Object);
-        context.SetOutputType((EdmEntityType)navigationPropertySegment.EdmType.AsElementType());
-        context.SetOutputPath(alias);
+        //context.SetOutputKind(navigationPropertySegment.EdmType.TypeKind == EdmTypeKind.Collection ? OutputKind.Collection : OutputKind.Object);
+        //context.SetOutputType((EdmEntityType)navigationPropertySegment.EdmType.AsElementType());
+        //context.SetOutputPath(alias);
+        return alias;
     }
 
-    public void VisitKeySegment(CompilerContext context, KeySegment keySegment) 
+    public EdmPath VisitKeySegment(CompilerContext context, KeySegment keySegment, EdmPath currentPath) 
     {
         var k = (keySegment.NavigationSource.Type.AsElementType() as EdmEntityType)!.GetEntityKey();
         BinaryFilter filter = new BinaryFilter() {
@@ -78,25 +85,29 @@ public class SemanticVisitor
             Value = keySegment.Keys.First().Value
         };
         context.AddFilter(filter);
-        context.SetOutputKind(OutputKind.Object);
+        //context.SetOutputKind(OutputKind.Object);
+        return currentPath;
     }
 
-    public void VisitPropertySegment(CompilerContext context, PropertySegment propertySegment) 
+    public EdmPath VisitPropertySegment(CompilerContext context, PropertySegment propertySegment, EdmPath currentPath) 
     {
-        context.AddSelect(context.GetOutputPath() , (EdmStructuralProperty)propertySegment.Property);
-        context.SetOutputKind(OutputKind.Property);
+        context.AddSelect(currentPath , (EdmStructuralProperty)propertySegment.Property);
+        //context.SetOutputKind(OutputKind.Property);
+        return currentPath;
     }
 
-    public void VisitCountSegment(CompilerContext context, CountSegment countSegment) 
+    public EdmPath VisitCountSegment(CompilerContext context, CountSegment countSegment, EdmPath currentPath) 
     {
-        context.AddCount(context.GetOutputPath(), context.GetOutputType()!.GetEntityKey());
-        context.SetOutputKind(OutputKind.RawValue);
+        var k =currentPath.AsEdmElements().Last().Item2.GetEntityType().GetEntityKey();
+        context.AddCount(currentPath, k);
+        //context.SetOutputKind(OutputKind.RawValue);
+        return currentPath;
     }
 
-    public void VisitFilterSegment(CompilerContext context, FilterSegment filterSegment)
+    public EdmPath VisitFilterSegment(CompilerContext context, FilterSegment filterSegment, EdmPath currentPath)
     {
         
-        context.WrapQuery(context.GetOutputPath());
+        context.WrapQuery(currentPath);
         var _it = new Variable() 
         {
             Name = filterSegment.RangeVariable.Name,
@@ -106,6 +117,7 @@ public class SemanticVisitor
         context.OpenVariableScope(_it);
         VisitExpression(context, filterSegment.Expression, filterSegment.RangeVariable);
         context.CloseVariableScope();
+        return currentPath;
     }
 
     public void VisitFilterClause(CompilerContext context, FilterClause filterClause){
@@ -124,18 +136,24 @@ public class SemanticVisitor
 
     internal void VisitSelectAndExpand(CompilerContext context, SelectExpandClause selectExpandClause)
     {
-        foreach (var item in selectExpandClause.SelectedItems)
+        if (selectExpandClause != null )
         {
-            switch (item)
+            foreach (var item in selectExpandClause.SelectedItems)
             {
-                case PathSelectItem i:
-                    VisitPath(context, i.SelectedPath);
-                    break;
-                case ExpandedNavigationSelectItem i:
-                    break;
-                case WildcardSelectItem i:
-                    break;
+                switch (item)
+                {
+                    case PathSelectItem i:
+                        VisitPath(context, i.SelectedPath);
+                        break;
+                    case ExpandedNavigationSelectItem i:
+                        break;
+                    case WildcardSelectItem i:
+                        break;
+                }
             }
+        }
+        else {
+            context.AddSelectAuto();
         }
     }
 
