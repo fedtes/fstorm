@@ -14,9 +14,8 @@ public class SemanticVisitor
         this.service = service;
     }
 
-    public void VisitPath(CompilerContext context, ODataPath oDataPath) 
+    public EdmPath VisitPath(CompilerContext context, ODataPath oDataPath, EdmPath current) 
     {
-        EdmPath current =null!;
         for (int i = 0; i < oDataPath.Count; i++)
         {
             switch (oDataPath[i])
@@ -44,9 +43,7 @@ public class SemanticVisitor
             }
         }
 
-        context.SetOutputPath(current);
-        var x = current.AsEdmElements().Last();
-        context.SetOutputType(x.Item2.GetEntityType());
+        return current;
     }
 
     public EdmPath VisitEntitySetSegment(CompilerContext context, EntitySetSegment entitySetSegment) 
@@ -134,7 +131,7 @@ public class SemanticVisitor
         }
     }
 
-    internal void VisitSelectAndExpand(CompilerContext context, SelectExpandClause selectExpandClause)
+    internal bool VisitSelectAndExpand(CompilerContext context, SelectExpandClause selectExpandClause)
     {
         if (selectExpandClause != null )
         {
@@ -143,18 +140,19 @@ public class SemanticVisitor
                 switch (item)
                 {
                     case PathSelectItem i:
-                        VisitPath(context, i.SelectedPath);
+                        VisitPath(context, i.SelectedPath, context.GetOutputPath());
                         break;
                     case ExpandedNavigationSelectItem i:
                         break;
                     case WildcardSelectItem i:
+                        context.AddSelectAll(context.GetOutputPath(), context.GetOutputType());
                         break;
                 }
             }
+            return true;
         }
-        else {
-            context.AddSelectAuto();
-        }
+
+        return false;
     }
 
 

@@ -18,8 +18,8 @@ namespace FStorm
         /// </summary>
         private AliasStore Aliases {get => MainScope.Aliases; }
         private OutputKind outputKind;
-        private EdmPath resourcePath = null!;
-        private EdmEntityType? resourceEdmType;
+        private EdmPath? resourcePath = null;
+        private EdmEntityType? resourceEdmType = null;
         private ODataPath oDataPath;
         private FilterClause filter;
         private SelectExpandClause selectExpand;
@@ -48,8 +48,12 @@ namespace FStorm
         internal SelectExpandClause GetSelectAndExpand() => selectExpand;
         internal OutputKind GetOutputKind() => outputKind;
         internal void SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
-        internal EdmPath GetOutputPath() => resourcePath;
-        internal void SetOutputPath(EdmPath ResourcePath) { resourcePath = ResourcePath; }
+        internal EdmPath? GetOutputPath() => resourcePath;
+        internal void SetOutputPath(EdmPath ResourcePath) { 
+            resourcePath = ResourcePath;
+            SetOutputType(ResourcePath.GetEdmEntityType()); 
+        }
+
         internal EdmEntityType? GetOutputType() => resourceEdmType;
         internal void SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
 
@@ -293,21 +297,15 @@ namespace FStorm
             ActiveQuery.Select($"{p}.{property.columnName} as {p}/{(customName ?? property.Name)}");
         }
 
-        internal void AddSelectAuto() {
-            if (this.GetOutputKind() == OutputKind.Collection || this.GetOutputKind() == OutputKind.Object || this.GetOutputKind() == OutputKind.Property) {
-                    this.AddSelect(this.GetOutputPath(), this.GetOutputType()!.GetEntityKey(), ":key");
-            }
-
-            if (this.GetOutputKind() == OutputKind.Collection || this.GetOutputKind() == OutputKind.Object)
-            {
-                AddSelectAll(this.GetOutputType()!);
-            }
+        internal void AddSelectKey(EdmPath path, EdmEntityType type)
+        {
+            this.AddSelect(path, type.GetEntityKey(), ":key");
         }
 
-        internal void AddSelectAll(EdmEntityType type) {
+        internal void AddSelectAll(EdmPath path, EdmEntityType type) {
             foreach (var property in type.DeclaredStructuralProperties())
             {
-                this.AddSelect(this.GetOutputPath(), (EdmStructuralProperty)property);
+                this.AddSelect(path, (EdmStructuralProperty)property);
             }
         }
 
@@ -372,13 +370,18 @@ namespace FStorm
         internal void WrapQuery(EdmPath resourcePath)
         {
             if (scope.Count > 1 || scope.Peek().ScopeType != CompilerScope.ROOT) {
-                throw new Exception("Cannot wrap query while a sub compiler scope is open or the current scopo is not the main");
+                throw new Exception("Cannot wrap query while a sub compiler scope is open or the current scopo is not the root");
             }
 
-            this.AddSelectAuto();
+            foreach (var property in resourcePath.GetEdmEntityType().DeclaredStructuralProperties())
+            {
+                var p = (EdmStructuralProperty)property;
+                this.AddSelect(resourcePath, p, p.columnName);
+            }
+
             CompilerContext tmpctx = new CompilerContext(this.GetOdataRequestPath(), filter, selectExpand);
-            var p = tmpctx.Aliases.AddOrGet(resourcePath);
-            SetMainQuery(tmpctx.ActiveQuery.From(this.ActiveQuery, p), tmpctx.Aliases);
+            var a = tmpctx.Aliases.AddOrGet(resourcePath);
+            SetMainQuery(tmpctx.ActiveQuery.From(this.ActiveQuery, a), tmpctx.Aliases);
         }
 
         #endregion

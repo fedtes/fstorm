@@ -42,7 +42,9 @@ namespace FStorm
         {
             ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.ResourcePath, UriKind.Relative));
             var context = new CompilerContext(parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand());
-            visitor.VisitPath(context, context.GetOdataRequestPath());
+            EdmPath current = context.GetOutputPath()!;
+            current = visitor.VisitPath(context, context.GetOdataRequestPath(), current);
+            context.SetOutputPath(current);
             visitor.VisitFilterClause(context, context.GetFilterClause());
             
             OutputKind outputKind = context.GetOdataRequestPath().LastSegment switch {
@@ -55,8 +57,16 @@ namespace FStorm
             };
 
             context.SetOutputKind(outputKind);
-            visitor.VisitSelectAndExpand(context, context.GetSelectAndExpand());
+            context.AddSelectKey(context.GetOutputPath(), context.GetOutputType());
+            bool handled = visitor.VisitSelectAndExpand(context, context.GetSelectAndExpand());
             
+            if (!handled) 
+            {
+                if (context.GetOutputKind() == OutputKind.Collection || context.GetOutputKind() == OutputKind.Object) {
+                    context.AddSelectAll(context.GetOutputPath(), context.GetOutputType());
+                }
+            }
+
             //context = compiler.AddGet(context, Configuration);
             return Compile(context);
         }

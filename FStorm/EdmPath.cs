@@ -180,6 +180,15 @@ namespace FStorm
         }
 
         /// <summary>
+        /// Return the <see cref="EdmEntityType"/> of the element corrispondig to this path if it target an entity or navigation property, or the container if it is a structural property. 
+        /// </summary>
+        /// <returns></returns>
+        public EdmEntityType GetEdmEntityType()
+        {
+            return this.AsEdmElements().Last().Item2.GetEntityType().EnsureType(fStormService);
+        }
+
+        /// <summary>
         /// Trasform the current path into an ordered list of tuples where each one is the subpath (<see cref="EdmPath"/>) and the corrispondig <see cref="IEdmElement"/> described in the <see cref="EdmModel"/>.
         /// </summary>
         /// <returns></returns>
