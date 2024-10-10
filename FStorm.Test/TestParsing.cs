@@ -174,165 +174,30 @@ namespace FStorm.Test
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
+        const string SELECT_COST_PART ="SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] ";
+
         [Test]
-        public void It_should_filter_collection_eq()
+        [TestCase("RagSoc eq 'Acme'","[P1].[RagSoc] = @p0")]
+        [TestCase("RagSoc ne 'Acme'","[P1].[RagSoc] <> @p0")]
+        [TestCase("ID gt 10","[P1].[CustomerID] > @p0")]
+        [TestCase("ID ge 10","[P1].[CustomerID] >= @p0")]
+        [TestCase("ID lt 10","[P1].[CustomerID] < @p0")]
+        [TestCase("ID le 10","[P1].[CustomerID] <= @p0")]
+        [TestCase("ID ge 1 and RagSoc eq 'acme'","([P1].[CustomerID] >= @p0 AND [P1].[RagSoc] = @p1)")]
+        [TestCase("ID ge 1 and ID le 2 and RagSoc eq 'acme'","([P1].[CustomerID] >= @p0 AND [P1].[CustomerID] <= @p1 AND [P1].[RagSoc] = @p2)")]
+        [TestCase("ID le 1 or ID ge 2","([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1)")]
+        [TestCase("ID le 1 or ID ge 3 or ID eq 2","([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1 OR [P1].[CustomerID] = @p2)")]
+        [TestCase("(ID le 1 or ID ge 3) and ID eq 2","([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1 OR [P1].[CustomerID] = @p2)")]
+        [TestCase("ID le 1 or ID ge 3 and ID eq 2","([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1 OR [P1].[CustomerID] = @p2)")]
+        [TestCase("ID eq 1 and ID eq 1 or ID eq 1 and ((ID eq 1 or ID eq 1 or ID eq 1) and ID eq 1)","(([P1].[CustomerID] = @p0 AND [P1].[CustomerID] = @p1) OR ([P1].[CustomerID] = @p2 AND ([P1].[CustomerID] = @p3 OR [P1].[CustomerID] = @p4 OR [P1].[CustomerID] = @p5) AND [P1].[CustomerID] = @p6))")]
+        public void It_should_filter(string input, string where)
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=RagSoc eq 'Acme'" })
+                .Get(new GetRequest() { ResourcePath = $"Customers?$filter={input}" })
                 .ToSQL();
 
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[RagSoc] = @p0";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void It_should_filter_collection_ne()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=RagSoc ne 'Acme'" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[RagSoc] <> @p0";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-
-        [Test]
-        public void It_should_filter_collection_gt()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID gt 10" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] > @p0";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void It_should_filter_collection_ge()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID ge 10" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] >= @p0";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void It_should_filter_collection_lt()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID lt 10" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] < @p0";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void It_should_filter_collection_le()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 10" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] <= @p0";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void It_should_filter_collection_and()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID ge 1 and RagSoc eq 'acme'" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] >= @p0 AND [P1].[RagSoc] = @p1)";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-
-        [Test]
-        public void It_should_filter_collection_and_2()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID ge 1 and ID le 2 and RagSoc eq 'acme'" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] >= @p0 AND [P1].[CustomerID] <= @p1 AND [P1].[RagSoc] = @p2)";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-
-        [Test]
-        public void It_should_filter_collection_or()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 1 or ID ge 2" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1)";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-
-        [Test]
-        public void It_should_filter_collection_or_2()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 1 or ID ge 3 or ID eq 2" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1 OR [P1].[CustomerID] = @p2)";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-
-        [Test]
-        public void It_should_filter_collection_or_and()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=(ID le 1 or ID ge 3) and ID eq 2" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE (([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1) AND [P1].[CustomerID] = @p2)";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void It_should_filter_collection_or_and_2()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID le 1 or ID ge 3 and ID eq 2" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE ([P1].[CustomerID] <= @p0 OR ([P1].[CustomerID] >= @p1 AND [P1].[CustomerID] = @p2))";
-            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
-        }
-
-
-        [Test]
-        public void It_should_filter_collection_or_and_3()
-        {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
-            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=ID eq 1 and ID eq 1 or ID eq 1 and ((ID eq 1 or ID eq 1 or ID eq 1) and ID eq 1)" })
-                .ToSQL();
-
-            string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE (([P1].[CustomerID] = @p0 AND [P1].[CustomerID] = @p1) OR ([P1].[CustomerID] = @p2 AND ([P1].[CustomerID] = @p3 OR [P1].[CustomerID] = @p4 OR [P1].[CustomerID] = @p5) AND [P1].[CustomerID] = @p6))";
+            string expected = @$"{SELECT_COST_PART}FROM [TABCustomers] AS [P1] WHERE {where}";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -445,6 +310,34 @@ namespace FStorm.Test
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
+
+        [Test]
+        [TestCase("RagSoc","[P1].[RagSoc]")]
+        [TestCase("RagSoc desc","[P1].[RagSoc] DESC")]
+        [TestCase("RagSoc desc,ID","[P1].[RagSoc] DESC, [P1].[CustomerID]")]
+        public void It_should_orderBy(string input, string orderby)
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
+                .Get(new GetRequest() { ResourcePath = "Customers?$select=ID&$orderby=" + input })
+                .ToSQL();
+
+            string expected = @$"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID] FROM [TABCustomers] AS [P1] ORDER BY {orderby}";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase("Address/City","[P2].[City]")]
+        public void It_should_orderBy_2(string input, string orderby)
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
+                .Get(new GetRequest() { ResourcePath = "Customers?$select=ID&$orderby=" + input })
+                .ToSQL();
+
+            string expected = @$"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABAddresses] AS [P2] ON [P2].[AddressID] = [P1].[AddressID] ORDER BY {orderby}";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
 
         /*
         String and Collection Functions

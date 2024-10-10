@@ -23,18 +23,21 @@ namespace FStorm
         private ODataPath oDataPath;
         private FilterClause filter;
         private SelectExpandClause selectExpand;
+        private readonly OrderByClause orderBy;
 
-        public CompilerContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand) {
+        public CompilerContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy) {
             this.oDataPath= oDataPath;
             this.filter = filter;
             this.selectExpand = selectExpand;
+            this.orderBy = orderBy;
             SetMainQuery(new SqlKata.Query());
         }
 
-        public CompilerContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, SqlKata.Query query) {
+        public CompilerContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, SqlKata.Query query) {
             this.oDataPath= oDataPath;
             this.filter = filter;
             this.selectExpand = selectExpand;
+            this.orderBy = orderBy;
             SetMainQuery(query);
         }
 
@@ -46,6 +49,7 @@ namespace FStorm
         internal ODataPath GetOdataRequestPath() => oDataPath;
         internal FilterClause GetFilterClause() => filter;
         internal SelectExpandClause GetSelectAndExpand() => selectExpand;
+        internal OrderByClause GetOrderByClause() => orderBy;
         internal OutputKind GetOutputKind() => outputKind;
         internal void SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
         internal EdmPath? GetOutputPath() => resourcePath;
@@ -366,7 +370,17 @@ namespace FStorm
             }
         }
 
-
+        internal void AddOrderBy(EdmPath edmPath, EdmStructuralProperty property,OrderByDirection direction ) 
+        {
+            var p = Aliases.AddOrGet(edmPath);
+            if (direction == OrderByDirection.Ascending) {
+                
+                ActiveQuery.OrderBy($"{p}.{property.columnName}");
+            }
+            else {
+                ActiveQuery.OrderByDesc($"{p}.{property.columnName}");
+            }
+        }
         internal void WrapQuery(EdmPath resourcePath)
         {
             if (scope.Count > 1 || scope.Peek().ScopeType != CompilerScope.ROOT) {
@@ -379,7 +393,7 @@ namespace FStorm
                 this.AddSelect(resourcePath, p, p.columnName);
             }
 
-            CompilerContext tmpctx = new CompilerContext(this.GetOdataRequestPath(), filter, selectExpand);
+            CompilerContext tmpctx = new CompilerContext(this.GetOdataRequestPath(), filter, selectExpand, orderBy);
             var a = tmpctx.Aliases.AddOrGet(resourcePath);
             SetMainQuery(tmpctx.ActiveQuery.From(this.ActiveQuery, a), tmpctx.Aliases);
         }
