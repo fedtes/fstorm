@@ -14,6 +14,7 @@ namespace FStorm
             services.AddTransient<GetRequestCommand>();
             services.AddTransient<Writer>();
             services.AddSingleton<SemanticVisitor>();
+            services.AddTransient<IQueryBuilder, DelegatedQueryBuilder>();
         }
     }
 
@@ -38,7 +39,7 @@ namespace FStorm
 
     public class FStormService
     {
-        IServiceProvider serviceProvider;
+        internal IServiceProvider serviceProvider;
         internal readonly FStormOptions options;
 
         public FStormService(IServiceProvider serviceProvider, EdmModel model, FStormOptions options) {

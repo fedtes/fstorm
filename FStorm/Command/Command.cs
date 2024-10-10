@@ -1,4 +1,4 @@
-﻿using SqlKata.Compilers;
+﻿
 
 namespace FStorm
 {
@@ -24,15 +24,7 @@ namespace FStorm
 
         protected virtual SQLCompiledQuery Compile(CompilerContext context) 
         {
-            SqlKata.Compilers.Compiler compiler = fsService.options.SQLCompilerType switch
-            {
-                SQLCompilerType.MSSQL => new SqlServerCompiler(),
-                SQLCompilerType.SQLLite => new SqliteCompiler(),
-                _ => throw new ArgumentException("Unexpected compiler type value")
-            };
-
-            var _compilerOutput = compiler.Compile(context.GetQuery());
-            return new SQLCompiledQuery(context, _compilerOutput.Sql, _compilerOutput.NamedBindings);
+            return context.GetQuery();
         }
     }
 

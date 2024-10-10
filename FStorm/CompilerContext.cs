@@ -1,5 +1,6 @@
 ﻿using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FStorm
 {
@@ -20,20 +21,23 @@ namespace FStorm
         private OutputKind outputKind;
         private EdmPath? resourcePath = null;
         private EdmEntityType? resourceEdmType = null;
+        private readonly FStormService service;
         private ODataPath oDataPath;
         private FilterClause filter;
         private SelectExpandClause selectExpand;
         private readonly OrderByClause orderBy;
 
-        public CompilerContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy) {
+        public CompilerContext(FStormService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy) {
+            this.service = service;
             this.oDataPath= oDataPath;
             this.filter = filter;
             this.selectExpand = selectExpand;
             this.orderBy = orderBy;
-            SetMainQuery(new SqlKata.Query());
+            SetMainQuery(service.serviceProvider.GetService<IQueryBuilder>()!);
         }
 
-        public CompilerContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, SqlKata.Query query) {
+        public CompilerContext(FStormService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, IQueryBuilder query) {
+            this.service = service;
             this.oDataPath= oDataPath;
             this.filter = filter;
             this.selectExpand = selectExpand;
@@ -41,11 +45,14 @@ namespace FStorm
             SetMainQuery(query);
         }
 
-        private void SetMainQuery(SqlKata.Query query, AliasStore? aliasStore = null) {
+        private void SetMainQuery(IQueryBuilder query, AliasStore? aliasStore = null) {
             scope.Clear();
             scope.Push(new CompilerScope(CompilerScope.ROOT, query, aliasStore));
         }
-        internal SqlKata.Query GetQuery() => ActiveQuery;
+        internal SQLCompiledQuery GetQuery() {
+            var (s,b) = ActiveQuery.Compile(service.options.SQLCompilerType);
+            return new SQLCompiledQuery(this, s, b) ;
+        }
         internal ODataPath GetOdataRequestPath() => oDataPath;
         internal FilterClause GetFilterClause() => filter;
         internal SelectExpandClause GetSelectAndExpand() => selectExpand;
@@ -101,14 +108,14 @@ namespace FStorm
         /// <summary>
         /// Shortcut to access the underlyng query builder of the <see cref="MainScope"/>.
         /// </summary>
-        private SqlKata.Query MainQuery { get => MainScope.Query; }
+        private IQueryBuilder MainQuery { get => MainScope.Query; }
 
         /// <summary>
         /// Shortcut to access the underlyng query builder of the <see cref="ActiveScope"/>.
         /// </summary>
-        private SqlKata.Query ActiveQuery { get => ActiveScope.Query;}
+        private IQueryBuilder ActiveQuery { get => ActiveScope.Query;}
 
-        private SqlKata.Query RootQuery { get => RootScope.Query;}
+        private IQueryBuilder RootQuery { get => RootScope.Query;}
 
         /// <summary>
         /// Open an "AND" scope. While in that the where clauses are in AND relation each others 
@@ -116,7 +123,7 @@ namespace FStorm
         internal void OpenAndScope() {
             if (ActiveScope.ScopeType != CompilerScope.AND)
             {
-                scope.Push(new CompilerScope(CompilerScope.AND,new SqlKata.Query()));
+                scope.Push(new CompilerScope(CompilerScope.AND, service.serviceProvider.GetService<IQueryBuilder>()!));
             }
             else {
                 scope.Push(new CompilerScope(CompilerScope.NO_SCOPE, ActiveQuery));
@@ -144,7 +151,7 @@ namespace FStorm
         internal void OpenOrScope() {
             if (ActiveScope.ScopeType != CompilerScope.OR)
             {
-                scope.Push(new CompilerScope(CompilerScope.OR,new SqlKata.Query()));
+                scope.Push(new CompilerScope(CompilerScope.OR, service.serviceProvider.GetService<IQueryBuilder>()!));
             }
             else 
             {
@@ -171,7 +178,7 @@ namespace FStorm
         /// Open an "NOT" scope. While in that the "where" clauses are wrapped around NOT 
         /// </summary>
         internal void OpenNotScope() {
-            scope.Push(new CompilerScope(CompilerScope.NOT,new SqlKata.Query()));
+            scope.Push(new CompilerScope(CompilerScope.NOT, service.serviceProvider.GetService<IQueryBuilder>()!));
         }
 
         /// <summary>
@@ -207,7 +214,7 @@ namespace FStorm
         /// </summary>
         internal void OpenAnyScope()
         {
-            var anyQ = new SqlKata.Query();
+            var anyQ = service.serviceProvider.GetService<IQueryBuilder>()!;
             var s = new CompilerScope(CompilerScope.ANY, anyQ, new AliasStore("ANY"));
             scope.Push(s);
             Variable _it  = GetVariablesInScope().First(x => x.Name == "$it");
@@ -243,7 +250,7 @@ namespace FStorm
         /// </summary>
         internal void OpenAllScope()
         {
-            var anyQ = new SqlKata.Query();
+            var anyQ = service.serviceProvider.GetService<IQueryBuilder>()!;
             var s = new CompilerScope(CompilerScope.ALL, anyQ, new AliasStore("ALL"));
             scope.Push(s);
             Variable _it  = GetVariablesInScope().First(x => x.Name == "$it");
@@ -393,7 +400,7 @@ namespace FStorm
                 this.AddSelect(resourcePath, p, p.columnName);
             }
 
-            CompilerContext tmpctx = new CompilerContext(this.GetOdataRequestPath(), filter, selectExpand, orderBy);
+            CompilerContext tmpctx = new CompilerContext(service, this.GetOdataRequestPath(), filter, selectExpand, orderBy);
             var a = tmpctx.Aliases.AddOrGet(resourcePath);
             SetMainQuery(tmpctx.ActiveQuery.From(this.ActiveQuery, a), tmpctx.Aliases);
         }
@@ -489,25 +496,25 @@ namespace FStorm
         public const string ANY = "any";
         public const string ALL = "all";
 
-        public readonly SqlKata.Query Query;
+        public readonly IQueryBuilder Query;
         public readonly string ScopeType;
         public readonly Variable? Variable;
 
         public readonly AliasStore Aliases;
 
-        internal CompilerScope(string scopeType, SqlKata.Query query){
+        internal CompilerScope(string scopeType, IQueryBuilder query){
             ScopeType = scopeType;
             Query = query;
             Aliases = new AliasStore();
         }
 
-        internal CompilerScope(string scopeType, SqlKata.Query query, AliasStore? aliasStore){
+        internal CompilerScope(string scopeType, IQueryBuilder query, AliasStore? aliasStore){
             ScopeType = scopeType;
             Query = query;
             Aliases = aliasStore ?? new AliasStore();
         }
 
-        internal CompilerScope(string scopeType, SqlKata.Query query, Variable variable){
+        internal CompilerScope(string scopeType, IQueryBuilder query, Variable variable){
             ScopeType = scopeType;
             Query = query;
             this.Variable = variable;

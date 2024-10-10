@@ -41,7 +41,7 @@ namespace FStorm
         public override SQLCompiledQuery ToSQL()
         {
             ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.ResourcePath, UriKind.Relative));
-            var context = new CompilerContext(parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand(), parser.ParseOrderBy());
+            var context = new CompilerContext(fsService, parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand(), parser.ParseOrderBy());
             EdmPath current = context.GetOutputPath()!;
             current = visitor.VisitPath(context, context.GetOdataRequestPath(), current);
             context.SetOutputPath(current);
