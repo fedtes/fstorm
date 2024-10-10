@@ -26,22 +26,25 @@ namespace FStorm
         private FilterClause filter;
         private SelectExpandClause selectExpand;
         private readonly OrderByClause orderBy;
+        private readonly PaginationClause pagination;
 
-        public CompilerContext(FStormService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy) {
+        public CompilerContext(FStormService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination) {
             this.service = service;
             this.oDataPath= oDataPath;
             this.filter = filter;
             this.selectExpand = selectExpand;
             this.orderBy = orderBy;
+            this.pagination = pagination;
             SetMainQuery(service.serviceProvider.GetService<IQueryBuilder>()!);
         }
 
-        public CompilerContext(FStormService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, IQueryBuilder query) {
+        public CompilerContext(FStormService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination, IQueryBuilder query) {
             this.service = service;
             this.oDataPath= oDataPath;
             this.filter = filter;
             this.selectExpand = selectExpand;
             this.orderBy = orderBy;
+            this.pagination = pagination;
             SetMainQuery(query);
         }
 
@@ -56,6 +59,7 @@ namespace FStorm
         internal ODataPath GetOdataRequestPath() => oDataPath;
         internal FilterClause GetFilterClause() => filter;
         internal SelectExpandClause GetSelectAndExpand() => selectExpand;
+        internal PaginationClause GetPaginationClause() => pagination;
         internal OrderByClause GetOrderByClause() => orderBy;
         internal OutputKind GetOutputKind() => outputKind;
         internal void SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
@@ -400,7 +404,7 @@ namespace FStorm
                 this.AddSelect(resourcePath, p, p.columnName);
             }
 
-            CompilerContext tmpctx = new CompilerContext(service, this.GetOdataRequestPath(), filter, selectExpand, orderBy);
+            CompilerContext tmpctx = new CompilerContext(service, this.GetOdataRequestPath(), filter, selectExpand, orderBy, pagination);
             var a = tmpctx.Aliases.AddOrGet(resourcePath);
             SetMainQuery(tmpctx.ActiveQuery.From(this.ActiveQuery, a), tmpctx.Aliases);
         }
@@ -439,7 +443,17 @@ namespace FStorm
             return _varElements[_it.ResourcePath.Count()];
         }
 
-#endregion
+        internal void AddLimit(long top)
+        {
+            ActiveQuery.Limit(top);
+        }
+
+        internal void AddOffset(long skip)
+        {
+            ActiveQuery.Offset(skip);
+        }
+
+        #endregion
 
     }
 
@@ -527,4 +541,15 @@ namespace FStorm
         }
     }
 
+}
+
+
+public class PaginationClause {
+    public PaginationClause(long? top, long? skip) {
+        Top = top;
+        Skip = skip;
+    }
+
+    public long? Top { get; }
+    public long? Skip { get; }
 }

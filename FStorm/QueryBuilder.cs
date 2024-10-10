@@ -70,6 +70,18 @@ public class DelegatedQueryBuilder : IQueryBuilder
         return this;
     }
 
+    IQueryBuilder IQueryBuilder.Limit(long top)
+    {
+        _query.Limit(Convert.ToInt32(top));
+        return this;
+    }
+
+    IQueryBuilder IQueryBuilder.Offset(long skip)
+    {
+        _query.Offset(skip);
+        return this;
+    }
+
     public IQueryBuilder Select(params string[] columns)
     {
         _query.Select(columns);
@@ -117,4 +129,6 @@ public class DelegatedQueryBuilder : IQueryBuilder
         var _compilerOutput = compiler.Compile(_query);
         return (_compilerOutput.Sql, _compilerOutput.NamedBindings);
     }
+
+
 }

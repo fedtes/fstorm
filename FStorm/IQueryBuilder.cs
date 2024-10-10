@@ -20,4 +20,6 @@ public interface IQueryBuilder
     IQueryBuilder OrderBy(params string[] columns);
     IQueryBuilder OrderByDesc(params string[] columns);
     (string statement, Dictionary<string, object> bindings) Compile(SQLCompilerType compilerType);
+    IQueryBuilder Limit(long top);
+    IQueryBuilder Offset(long skip);
 }

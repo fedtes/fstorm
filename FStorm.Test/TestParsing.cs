@@ -309,6 +309,7 @@ namespace FStorm.Test
             string expected = @$"SELECT {select} FROM [TABCustomers] AS [P1]";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
+        
 
 
         [Test]
@@ -327,7 +328,7 @@ namespace FStorm.Test
         }
 
         [Test]
-        [TestCase("Address/City","[P2].[City]")]
+        [TestCase("Address","[P2].[City]")]
         public void It_should_orderBy_2(string input, string orderby)
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
@@ -336,6 +337,24 @@ namespace FStorm.Test
                 .ToSQL();
 
             string expected = @$"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABAddresses] AS [P2] ON [P2].[AddressID] = [P1].[AddressID] ORDER BY {orderby}";
+            Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
+        }
+
+
+        [Test]
+        [TestCase(1,0)]
+        [TestCase(10,5)]
+        [TestCase(20000,19000)]
+        public void It_should_top(int top, int skip)
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
+                .Get(new GetRequest() { ResourcePath = "Customers?$select=ID&$orderby=ID&$top=" + top + "&$skip=" + skip })
+                .ToSQL();
+
+            string expected = @$"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID] FROM [TABCustomers] AS [P1] ORDER BY [P1].[CustomerID] OFFSET @p0 ROWS FETCH NEXT @p1 ROWS ONLY";
+            Assert.That(_SqlQuery.Bindings["@p1"], Is.EqualTo(top));
+            Assert.That(_SqlQuery.Bindings["@p0"], Is.EqualTo(skip));
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 

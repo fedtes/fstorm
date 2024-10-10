@@ -390,6 +390,21 @@ public class SemanticVisitor
 
 #endregion
 
+#region "Visit Pagination"
+
+    public void VisitPagination(CompilerContext context, PaginationClause pagination)
+    {
+        if (pagination.Top != null)
+        {
+            context.AddLimit(pagination.Top.Value);
+        }
+        if (pagination.Skip != null)
+        {
+            context.AddOffset(pagination.Skip.Value);
+        }
+    }
+#endregion
+
 }
 
 
