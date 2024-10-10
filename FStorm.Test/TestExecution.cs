@@ -45,7 +45,7 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var con = _FStormService.OpenConnection(connection);
             
-            var r = await con.Get(new GetRequest() { ResourcePath = "Customers" }).ToListAsync();
+            var r = await con.Get(new GetRequest() { RequestPath = "Customers" }).ToListAsync();
 
             var w = serviceProvider.GetService<Writer>()!;
             var sr = w.WriteResult(r);
@@ -58,7 +58,7 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var con = _FStormService.OpenConnection(connection);
 
-            var r = await con.Get(new GetRequest() { ResourcePath = "Customers(1)" }).ToListAsync();
+            var r = await con.Get(new GetRequest() { RequestPath = "Customers(1)" }).ToListAsync();
 
             var w = serviceProvider.GetService<Writer>()!;
             var sr = w.WriteResult(r);
@@ -71,7 +71,7 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var con = _FStormService.OpenConnection(connection);
 
-            var r = await con.Get(new GetRequest() { ResourcePath = "Customers(1)/RagSoc" }).ToListAsync();
+            var r = await con.Get(new GetRequest() { RequestPath = "Customers(1)/RagSoc" }).ToListAsync();
 
             var w = serviceProvider.GetService<Writer>()!;
             var sr = w.WriteResult(r);
@@ -85,7 +85,7 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var con = _FStormService.OpenConnection(connection);
 
-            var r = await con.Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$count" }).ToListAsync();
+            var r = await con.Get(new GetRequest() { RequestPath = "Customers(1)/Orders/$count" }).ToListAsync();
 
             var w = serviceProvider.GetService<Writer>()!;
             var sr = w.WriteResult(r);

@@ -11,7 +11,7 @@ namespace FStorm
             services.AddSingleton<EdmPathFactory>();
             services.AddTransient<Connection>();
             services.AddTransient<Transaction>();
-            services.AddTransient<GetRequestCommand>();
+            services.AddTransient<Command, GetRequestCommand>();
             services.AddTransient<Writer>();
             services.AddSingleton<SemanticVisitor>();
             services.AddTransient<IQueryBuilder, DelegatedQueryBuilder>();

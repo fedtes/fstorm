@@ -8,74 +8,18 @@ namespace FStorm
         /// <summary>
         /// Path to address a collection (of entities), a single entity within a collection, a singleton, as well as a property of an entity.
         /// </summary>
-        public string ResourcePath { get; set; }
-        public string? Filter { get; set; }
-        public string? Select { get; set; }
-        public string? Count { get; set; }
-        public string? OrderBy { get; set; }
-        public string? Top { get; set; }
-        public string? Skip { get; set; }
+        public string RequestPath { get; set; }
         public GetRequest()
         {
-            ResourcePath = String.Empty;
+            RequestPath = String.Empty;
         }
     }
 
     public class GetRequestCommand : Command
     {
-        private readonly SemanticVisitor visitor;
-        private readonly EdmPathFactory pathFactory;
+        public GetRequestCommand(IServiceProvider serviceProvider, FStormService fStormService, SemanticVisitor visitor, EdmPathFactory pathFactory) : base(serviceProvider, fStormService, visitor, pathFactory){ }
 
-        public GetRequestCommand(
-            IServiceProvider serviceProvider,
-            FStormService fStormService,
-            SemanticVisitor visitor,
-            EdmPathFactory pathFactory) : base(serviceProvider, fStormService)
-        {
-            this.visitor = visitor;
-            this.pathFactory = pathFactory;
-        }
-
-        internal GetRequest Configuration { get; set; } = null!;
-
-        public override SQLCompiledQuery ToSQL()
-        {
-            ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.ResourcePath, UriKind.Relative));
-            var context = new CompilerContext(fsService, parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand(), parser.ParseOrderBy(), new PaginationClause(parser.ParseTop(), parser.ParseSkip()));
-            EdmPath current = context.GetOutputPath()!;
-            current = visitor.VisitPath(context, context.GetOdataRequestPath(), current);
-            context.SetOutputPath(current);
-            visitor.VisitFilterClause(context, context.GetFilterClause());
-            visitor.VisitOrderByClause(context, context.GetOrderByClause());
-            
-            OutputKind outputKind = context.GetOdataRequestPath().LastSegment switch {
-                EntitySetSegment _ => OutputKind.Collection,
-                NavigationPropertySegment s => s.EdmType.TypeKind == EdmTypeKind.Collection ? OutputKind.Collection : OutputKind.Object,
-                KeySegment _ => OutputKind.Object,
-                PropertySegment _ => OutputKind.Property,
-                CountSegment _ => OutputKind.RawValue,
-                _ => OutputKind.Collection
-            };
-
-            context.SetOutputKind(outputKind);
-            context.AddSelectKey(context.GetOutputPath(), context.GetOutputType());
-            bool handled = visitor.VisitSelectAndExpand(context, context.GetSelectAndExpand());
-            
-            if (!handled) 
-            {
-                if (context.GetOutputKind() == OutputKind.Collection || context.GetOutputKind() == OutputKind.Object) {
-                    context.AddSelectAll(context.GetOutputPath(), context.GetOutputType());
-                }
-            }
-
-            visitor.VisitPagination(context, context.GetPaginationClause());
-
-            //context = compiler.AddGet(context, Configuration);
-            return Compile(context);
-        }
-
-
-        public async Task<CommandResult<CompilerContext>> ToListAsync()
+        public override async Task<CommandResult<CompilerContext>> ToListAsync()
         {
             if (connection == null || this.transaction == null)
             {

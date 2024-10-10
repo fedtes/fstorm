@@ -29,7 +29,7 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService
                 .OpenConnection(new FakeConnection())
-                .Get(new GetRequest() { ResourcePath = "Customers" })
+                .Get(new GetRequest() { RequestPath = "Customers" })
                 .ToSQL();
 
             string expected = "SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1]";
@@ -42,7 +42,7 @@ namespace FStorm.Test
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService
                 .OpenConnection(new FakeConnection())
-                .Get(new GetRequest() { ResourcePath = "Customers(1)" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)" })
                 .ToSQL();
 
             string expected = "SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] = @p0";
@@ -54,7 +54,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
-                .Get(new GetRequest() { ResourcePath = "Customers(1)/RagSoc" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)/RagSoc" })
                 .ToSQL();
 
             string expected = "SELECT [P1].[RagSoc] AS [P1/RagSoc], [P1].[CustomerID] AS [P1/:key] FROM [TABCustomers] AS [P1] WHERE [P1].[CustomerID] = @p0";
@@ -67,7 +67,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
-                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)/Orders" })
                 .ToSQL();
 
             string expected = @"SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0";
@@ -79,7 +79,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
-                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)/Orders('O24-01')" })
                 .ToSQL();
 
             string expected = @"SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0 AND [P2].[OrderNumber] = @p1";
@@ -91,7 +91,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
-                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')/OrderDate" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)/Orders('O24-01')/OrderDate" })
                 .ToSQL();
 
             string expected = @"SELECT [P2].[OrderDate] AS [P2/OrderDate], [P2].[OrderNumber] AS [P2/:key] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0 AND [P2].[OrderNumber] = @p1";
@@ -103,7 +103,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection())
-                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders('O24-01')/Customer" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)/Orders('O24-01')/Customer" })
                 .ToSQL();
 
             string expected = @"SELECT [P3].[CustomerID] AS [P3/:key], [P3].[CustomerID] AS [P3/ID], [P3].[RagSoc] AS [P3/RagSoc], [P3].[AddressID] AS [P3/AddressID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID]LEFT JOIN [TABCustomers] AS [P3] ON [P3].[CustomerID] = [P2].[CustomerID] WHERE [P1].[CustomerID] = @p0 AND [P2].[OrderNumber] = @p1";
@@ -116,7 +116,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Orders('O24-01')/Customer" })
+                .Get(new GetRequest() { RequestPath = "Orders('O24-01')/Customer" })
                 .ToSQL();
 
             string expected = @"SELECT [P2].[CustomerID] AS [P2/:key], [P2].[CustomerID] AS [P2/ID], [P2].[RagSoc] AS [P2/RagSoc], [P2].[AddressID] AS [P2/AddressID] FROM [TABOrders] AS [P1] LEFT JOIN [TABCustomers] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[OrderNumber] = @p0";
@@ -129,7 +129,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$count" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)/Orders/$count" })
                 .ToSQL();
 
             string expected = @"SELECT COUNT([P2].[OrderNumber]) AS [count] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0";
@@ -142,7 +142,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(Total gt 100)" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)/Orders/$filter(Total gt 100)" })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM (SELECT [P2].[OrderNumber] AS [P2/OrderNumber], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P1] WHERE [P1].[Total] > @p1";
@@ -154,7 +154,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(Total gt 100)/1/OrderDate" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)/Orders/$filter(Total gt 100)/1/OrderDate" })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[OrderDate] AS [P1/OrderDate], [P1].[OrderNumber] AS [P1/:key] FROM (SELECT [P2].[OrderNumber] AS [P2/OrderNumber], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P1] WHERE [P1].[Total] > @p1 AND [P1].[OrderNumber] = @p2";
@@ -167,7 +167,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers(1)/Orders/$filter(@expr)?@expr=Total gt 100" })
+                .Get(new GetRequest() { RequestPath = "Customers(1)/Orders/$filter(@expr)?@expr=Total gt 100" })
                 .ToSQL();
 
             string expected = @"SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[CustomerID] AS [P2/CustomerID] FROM (SELECT [P2].[OrderNumber] AS [P2/:key], [P2].[OrderNumber] AS [P2/Number], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P2] WHERE [P2].[Total] = @p1";
@@ -194,7 +194,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = $"Customers?$filter={input}" })
+                .Get(new GetRequest() { RequestPath = $"Customers?$filter={input}" })
                 .ToSQL();
 
             string expected = @$"{SELECT_COST_PART}FROM [TABCustomers] AS [P1] WHERE {where}";
@@ -206,7 +206,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Orders?$filter=Customer/ID eq 1" })
+                .Get(new GetRequest() { RequestPath = "Orders?$filter=Customer/ID eq 1" })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM [TABOrders] AS [P1] LEFT JOIN [TABCustomers] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P2].[CustomerID] = @p0";
@@ -218,7 +218,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Orders?$filter=Customer/Address/City eq 'New York'" })
+                .Get(new GetRequest() { RequestPath = "Orders?$filter=Customer/Address/City eq 'New York'" })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM [TABOrders] AS [P1] LEFT JOIN [TABCustomers] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID]LEFT JOIN [TABAddresses] AS [P3] ON [P3].[AddressID] = [P2].[AddressID] WHERE [P3].[City] = @p0";
@@ -231,7 +231,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=Orders/any(x:x/Total gt 100)" })
+                .Get(new GetRequest() { RequestPath = "Customers?$filter=Orders/any(x:x/Total gt 100)" })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE EXISTS (SELECT 1 FROM [TABOrders] AS [ANY1] WHERE [ANY1].[CustomerID] = [P1].[CustomerID] AND [ANY1].[Total] > @p0)";
@@ -244,7 +244,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Orders?$filter=DeliveryAddress/Hints/any(x:x/Hint eq 'dangerous dog!')" })
+                .Get(new GetRequest() { RequestPath = "Orders?$filter=DeliveryAddress/Hints/any(x:x/Hint eq 'dangerous dog!')" })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM [TABOrders] AS [P1] WHERE EXISTS (SELECT 1 FROM [TABAddresses] AS [ANY1] LEFT JOIN [TABAddressHints] AS [ANY2] ON [ANY2].[AddressID] = [ANY1].[AddressID] WHERE [ANY1].[AddressID] = [P1].[DeliveryAddressID] AND [ANY2].[Hint] = @p0)";
@@ -257,7 +257,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=Orders/all(x:x/Total gt 100)" })
+                .Get(new GetRequest() { RequestPath = "Customers?$filter=Orders/all(x:x/Total gt 100)" })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE NOT EXISTS (SELECT 1 FROM [TABOrders] AS [ALL1] WHERE [ALL1].[CustomerID] = [P1].[CustomerID] AND NOT ([ALL1].[Total] > @p0))";
@@ -270,7 +270,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=Orders/all(x:x/Total gt 100 and x/Total lt 200)" })
+                .Get(new GetRequest() { RequestPath = "Customers?$filter=Orders/all(x:x/Total gt 100 and x/Total lt 200)" })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE NOT EXISTS (SELECT 1 FROM [TABOrders] AS [ALL1] WHERE [ALL1].[CustomerID] = [P1].[CustomerID] AND NOT (([ALL1].[Total] > @p0 AND [ALL1].[Total] < @p1)))";
@@ -286,7 +286,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$filter=" + filter })
+                .Get(new GetRequest() { RequestPath = "Customers?$filter=" + filter })
                 .ToSQL();
 
             string expected = @"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID], [P1].[RagSoc] AS [P1/RagSoc], [P1].[AddressID] AS [P1/AddressID] FROM [TABCustomers] AS [P1] WHERE [P1].[RagSoc] like @p0";
@@ -303,7 +303,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$select=" + input })
+                .Get(new GetRequest() { RequestPath = "Customers?$select=" + input })
                 .ToSQL();
 
             string expected = @$"SELECT {select} FROM [TABCustomers] AS [P1]";
@@ -320,7 +320,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$select=ID&$orderby=" + input })
+                .Get(new GetRequest() { RequestPath = "Customers?$select=ID&$orderby=" + input })
                 .ToSQL();
 
             string expected = @$"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID] FROM [TABCustomers] AS [P1] ORDER BY {orderby}";
@@ -333,7 +333,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$select=ID&$orderby=" + input })
+                .Get(new GetRequest() { RequestPath = "Customers?$select=ID&$orderby=" + input })
                 .ToSQL();
 
             string expected = @$"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABAddresses] AS [P2] ON [P2].[AddressID] = [P1].[AddressID] ORDER BY {orderby}";
@@ -349,7 +349,7 @@ namespace FStorm.Test
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var _SqlQuery = _FStormService.OpenConnection(new FakeConnection()) 
-                .Get(new GetRequest() { ResourcePath = "Customers?$select=ID&$orderby=ID&$top=" + top + "&$skip=" + skip })
+                .Get(new GetRequest() { RequestPath = "Customers?$select=ID&$orderby=ID&$top=" + top + "&$skip=" + skip })
                 .ToSQL();
 
             string expected = @$"SELECT [P1].[CustomerID] AS [P1/:key], [P1].[CustomerID] AS [P1/ID] FROM [TABCustomers] AS [P1] ORDER BY [P1].[CustomerID] OFFSET @p0 ROWS FETCH NEXT @p1 ROWS ONLY";
