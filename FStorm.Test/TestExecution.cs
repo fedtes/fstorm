@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Data.Sqlite;
 
 namespace FStorm.Test
@@ -24,7 +25,7 @@ namespace FStorm.Test
         [SetUp]
         public void Setup()
         {
-            connection = new SqliteConnection("Data Source=InMemorySample;Mode=Memory;Cache=Shared");
+            connection = new SqliteConnection("Data Source=.\\MockData;");
             connection.Open();
             MockModel.CreateDB(connection);
             var services = new ServiceCollection();
@@ -42,6 +43,7 @@ namespace FStorm.Test
         [Test]
         public async Task It_Should_read_entity_collection()
         {
+            
             var _FStormService = serviceProvider.GetService<FStormService>()!;
             var con = _FStormService.OpenConnection(connection);
             

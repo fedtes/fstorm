@@ -187,8 +187,8 @@ namespace FStorm.Test
         [TestCase("ID ge 1 and ID le 2 and RagSoc eq 'acme'","([P1].[CustomerID] >= @p0 AND [P1].[CustomerID] <= @p1 AND [P1].[RagSoc] = @p2)")]
         [TestCase("ID le 1 or ID ge 2","([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1)")]
         [TestCase("ID le 1 or ID ge 3 or ID eq 2","([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1 OR [P1].[CustomerID] = @p2)")]
-        [TestCase("(ID le 1 or ID ge 3) and ID eq 2","([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1 OR [P1].[CustomerID] = @p2)")]
-        [TestCase("ID le 1 or ID ge 3 and ID eq 2","([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1 OR [P1].[CustomerID] = @p2)")]
+        [TestCase("(ID le 1 or ID ge 3) and ID eq 2","(([P1].[CustomerID] <= @p0 OR [P1].[CustomerID] >= @p1) AND [P1].[CustomerID] = @p2)")]
+        [TestCase("ID le 1 or ID ge 3 and ID eq 2","([P1].[CustomerID] <= @p0 OR ([P1].[CustomerID] >= @p1 AND [P1].[CustomerID] = @p2))")]
         [TestCase("ID eq 1 and ID eq 1 or ID eq 1 and ((ID eq 1 or ID eq 1 or ID eq 1) and ID eq 1)","(([P1].[CustomerID] = @p0 AND [P1].[CustomerID] = @p1) OR ([P1].[CustomerID] = @p2 AND ([P1].[CustomerID] = @p3 OR [P1].[CustomerID] = @p4 OR [P1].[CustomerID] = @p5) AND [P1].[CustomerID] = @p6))")]
         public void It_should_filter(string input, string where)
         {
@@ -328,7 +328,7 @@ namespace FStorm.Test
         }
 
         [Test]
-        [TestCase("Address","[P2].[City]")]
+        [TestCase("Address/City","[P2].[City]")]
         public void It_should_orderBy_2(string input, string orderby)
         {
             var _FStormService = serviceProvider.GetService<FStormService>()!;
