@@ -52,10 +52,7 @@ namespace FStorm
             scope.Clear();
             scope.Push(new CompilerScope(CompilerScope.ROOT, query, aliasStore));
         }
-        internal SQLCompiledQuery GetQuery() {
-            var (s,b) = ActiveQuery.Compile(service.options.SQLCompilerType);
-            return new SQLCompiledQuery(this, s, b) ;
-        }
+        internal SQLCompiledQuery Compile() => ActiveQuery.Compile();
         internal ODataPath GetOdataRequestPath() => oDataPath;
         internal FilterClause GetFilterClause() => filter;
         internal SelectExpandClause GetSelectAndExpand() => selectExpand;
@@ -312,12 +309,17 @@ namespace FStorm
             ActiveQuery.Select($"{p}.{property.columnName} as {p}/{(customName ?? property.Name)}");
         }
 
-        internal void AddSelectKey(EdmPath path, EdmEntityType type)
+        internal void AddSelectKey(EdmPath? path, EdmEntityType? type)
         {
+            ArgumentNullException.ThrowIfNull(path);
+            ArgumentNullException.ThrowIfNull(type);
             this.AddSelect(path, type.GetEntityKey(), ":key");
         }
 
-        internal void AddSelectAll(EdmPath path, EdmEntityType type) {
+        internal void AddSelectAll(EdmPath? path, EdmEntityType? type) 
+        {
+            ArgumentNullException.ThrowIfNull(path);
+            ArgumentNullException.ThrowIfNull(type);
             foreach (var property in type.DeclaredStructuralProperties())
             {
                 this.AddSelect(path, (EdmStructuralProperty)property);
@@ -340,21 +342,39 @@ namespace FStorm
                 case BinaryOperatorKind.And:
                     throw new NotImplementedException("should not pass here!");
                 case BinaryOperatorKind.Equal:
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","=", filter.Value);
+                    if (filter.Value is null) 
+                    {
+                        (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNull($"{p}.{filter.PropertyReference.Property.columnName}");
+                    }
+                    else 
+                    {
+                        (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","=", filter.Value);
+                    }
                     break;
                 case BinaryOperatorKind.NotEqual:
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","<>", filter.Value);
+                    if (filter.Value is null) 
+                    {
+                        (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNotNull($"{p}.{filter.PropertyReference.Property.columnName}");
+                    }
+                    else 
+                    {
+                        (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","<>", filter.Value);
+                    }
                     break;
                 case BinaryOperatorKind.GreaterThan:
+                    ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
                     (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}",">", filter.Value);
                     break;
                 case BinaryOperatorKind.GreaterThanOrEqual:
+                    ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
                     (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}",">=", filter.Value);
                     break;
                 case BinaryOperatorKind.LessThan:
+                    ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
                     (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","<", filter.Value);
                     break;
                 case BinaryOperatorKind.LessThanOrEqual:
+                    ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
                     (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}","<=", filter.Value);
                     break;
                 case BinaryOperatorKind.Add:
@@ -453,7 +473,83 @@ namespace FStorm
             ActiveQuery.Offset(skip);
         }
 
-        #endregion
+#endregion
+
+        internal class AliasStore
+        {
+            private readonly string Prefix;
+
+            private int index = 0;
+
+            public AliasStore() {
+                Prefix = "P";
+            }
+
+            public AliasStore(string Prefix) {
+                this.Prefix = Prefix;
+            }
+
+            private Dictionary<EdmPath, string> aliases = new Dictionary<EdmPath, string>();
+
+            private string ComputeNewAlias(EdmPath path) {
+                index++;
+                return $"{Prefix}{index}";
+            }
+
+            public string AddOrGet(EdmPath path) {
+                if (!Contains(path)) {
+                    var a = ComputeNewAlias(path);
+                    aliases.Add(path, a);
+                }
+                return aliases[path];
+            }
+
+            public bool Contains(EdmPath path) {
+                return aliases.ContainsKey(path);
+            }
+        }
+
+        internal class CompilerScope
+        {
+            public const string ROOT = "main";
+            public const string AND = "and";
+            public const string NOT = "not";
+            public const string OR = "or";
+            public const string NO_SCOPE = "noscope";
+            public const string VARIABLE = "var";
+            public const string ANY = "any";
+            public const string ALL = "all";
+
+            public readonly IQueryBuilder Query;
+            public readonly string ScopeType;
+            public readonly Variable? Variable;
+
+            public readonly AliasStore Aliases;
+
+            internal CompilerScope(string scopeType, IQueryBuilder query){
+                ScopeType = scopeType;
+                Query = query;
+                Aliases = new AliasStore();
+            }
+
+            internal CompilerScope(string scopeType, IQueryBuilder query, AliasStore? aliasStore){
+                ScopeType = scopeType;
+                Query = query;
+                Aliases = aliasStore ?? new AliasStore();
+            }
+
+            internal CompilerScope(string scopeType, IQueryBuilder query, Variable variable){
+                ScopeType = scopeType;
+                Query = query;
+                this.Variable = variable;
+                Aliases = new AliasStore();
+            }
+
+            public override string ToString()
+            {
+                return ScopeType;
+            }
+        }
 
     }
 
@@ -465,91 +561,4 @@ namespace FStorm
         RawValue
     }
 
-    public class AliasStore
-    {
-        private readonly string Prefix;
-
-        private int index = 0;
-
-        public AliasStore() {
-            Prefix = "P";
-        }
-
-        public AliasStore(string Prefix) {
-            this.Prefix = Prefix;
-        }
-
-        private Dictionary<EdmPath, string> aliases = new Dictionary<EdmPath, string>();
-
-        private string ComputeNewAlias(EdmPath path) {
-            index++;
-            return $"{Prefix}{index}";
-        }
-
-        public string AddOrGet(EdmPath path) {
-            if (!Contains(path)) {
-                var a = ComputeNewAlias(path);
-                aliases.Add(path, a);
-            }
-            return aliases[path];
-        }
-
-        public bool Contains(EdmPath path) {
-            return aliases.ContainsKey(path);
-        }
-    }
-
-    public class CompilerScope
-    {
-        public const string ROOT = "main";
-        public const string AND = "and";
-        public const string NOT = "not";
-        public const string OR = "or";
-        public const string NO_SCOPE = "noscope";
-        public const string VARIABLE = "var";
-        public const string ANY = "any";
-        public const string ALL = "all";
-
-        public readonly IQueryBuilder Query;
-        public readonly string ScopeType;
-        public readonly Variable? Variable;
-
-        public readonly AliasStore Aliases;
-
-        internal CompilerScope(string scopeType, IQueryBuilder query){
-            ScopeType = scopeType;
-            Query = query;
-            Aliases = new AliasStore();
-        }
-
-        internal CompilerScope(string scopeType, IQueryBuilder query, AliasStore? aliasStore){
-            ScopeType = scopeType;
-            Query = query;
-            Aliases = aliasStore ?? new AliasStore();
-        }
-
-        internal CompilerScope(string scopeType, IQueryBuilder query, Variable variable){
-            ScopeType = scopeType;
-            Query = query;
-            this.Variable = variable;
-            Aliases = new AliasStore();
-        }
-
-        public override string ToString()
-        {
-            return ScopeType;
-        }
-    }
-
-}
-
-
-public class PaginationClause {
-    public PaginationClause(long? top, long? skip) {
-        Top = top;
-        Skip = skip;
-    }
-
-    public long? Top { get; }
-    public long? Skip { get; }
 }

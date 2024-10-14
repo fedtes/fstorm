@@ -1,5 +1,3 @@
-using System;
-
 namespace FStorm;
 
 public interface IQueryBuilder
@@ -19,7 +17,22 @@ public interface IQueryBuilder
     IQueryBuilder WhereLike(string column, string value, bool caseSensitive);
     IQueryBuilder OrderBy(params string[] columns);
     IQueryBuilder OrderByDesc(params string[] columns);
-    (string statement, Dictionary<string, object> bindings) Compile(SQLCompilerType compilerType);
+    SQLCompiledQuery Compile();
     IQueryBuilder Limit(long top);
     IQueryBuilder Offset(long skip);
+    IQueryBuilder WhereNull(string v);
+    IQueryBuilder WhereNotNull(string v);
+}
+
+
+
+public class SQLCompiledQuery
+{
+    public string Statement { get; }
+    public Dictionary<string, object> Bindings { get; }
+    public SQLCompiledQuery(string statement, Dictionary<string, object> bindings)
+    {
+        Statement = statement;
+        Bindings = bindings;
+    }
 }

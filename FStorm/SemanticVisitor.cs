@@ -20,7 +20,7 @@ public class SemanticVisitor
     /// <param name="context"></param>
     public void VisitContext(CompilerContext context)
     {
-        EdmPath current = context.GetOutputPath()!;
+        EdmPath? current = context.GetOutputPath();
         current = this.VisitPath(context, context.GetOdataRequestPath(), current);
         context.SetOutputPath(current);
         this.VisitFilterClause(context, context.GetFilterClause());
@@ -50,8 +50,9 @@ public class SemanticVisitor
     }
 
 #region "Visit Path"
-    protected EdmPath VisitPath(CompilerContext context, ODataPath oDataPath, EdmPath current) 
+    protected EdmPath VisitPath(CompilerContext context, ODataPath oDataPath, EdmPath? input) 
     {
+        EdmPath current = input ?? pathFactory.CreatePath();
         for (int i = 0; i < oDataPath.Count; i++)
         {
             switch (oDataPath[i])
@@ -196,7 +197,7 @@ public class SemanticVisitor
         }
     }
 
-    protected ExpressionValue? VisitExpression(CompilerContext context, SingleValueNode singleValueNode, RangeVariable? variable = null) 
+    protected ExpressionValue VisitExpression(CompilerContext context, SingleValueNode singleValueNode, RangeVariable? variable = null) 
     {
         switch (singleValueNode)
         {
@@ -227,7 +228,7 @@ public class SemanticVisitor
         }
     }
 
-    protected ExpressionValue? VisitNotNode(CompilerContext context, UnaryOperatorNode node)
+    protected ExpressionValue VisitNotNode(CompilerContext context, UnaryOperatorNode node)
     {
         if (node.OperatorKind == UnaryOperatorKind.Not) {
             context.OpenNotScope();
@@ -240,7 +241,7 @@ public class SemanticVisitor
         return new ExpressionValue();
     }
 
-    protected ExpressionValue? VisitBinaryOperator(CompilerContext context, BinaryOperatorNode node)
+    protected ExpressionValue VisitBinaryOperator(CompilerContext context, BinaryOperatorNode node)
     {
         if (node.OperatorKind == BinaryOperatorKind.And) 
         {
@@ -261,21 +262,28 @@ public class SemanticVisitor
             BinaryFilter filter = new BinaryFilter() {
                 PropertyReference = (PropertyReference)VisitExpression(context, node.Left),
                 OperatorKind = node.OperatorKind,
-                Value = (VisitExpression(context, node.Right) as ConstantValue).Value
+                Value = (VisitExpression(context, node.Right) as ConstantValue)?.Value
             };
             context.AddFilter(filter);
         }
         return new ExpressionValue();
     }
 
-    protected ExpressionValue? VisitSingleValuePropertyAccessNode(CompilerContext context, SingleValuePropertyAccessNode node) {
-        return new PropertyReference() {
-            Property = (EdmStructuralProperty)node.Property,
-            ResourcePath = (VisitExpression(context, node.Source) as PathValue).ResourcePath
-        };
+    protected ExpressionValue VisitSingleValuePropertyAccessNode(CompilerContext context, SingleValuePropertyAccessNode node) {
+        var v = VisitExpression(context, node.Source);
+        if (v is PathValue pathValue) {
+            return new PropertyReference() {
+                Property = (EdmStructuralProperty)node.Property,
+                ResourcePath = pathValue.ResourcePath
+            };
+        }
+        else {
+            throw new InvalidOperationException($"Unexpected property access node for {node.Property.ToString()}.");
+        }
+        
     }
 
-    protected ExpressionValue? VisitSingleNavigationNode(CompilerContext context, SingleNavigationNode node)
+    protected ExpressionValue VisitSingleNavigationNode(CompilerContext context, SingleNavigationNode node)
     {
         if (node.NavigationSource is IEdmContainedEntitySet)
         {
@@ -301,11 +309,11 @@ public class SemanticVisitor
         throw new InvalidOperationException("Unexpected NavigationSource type.");
     }
 
-    protected ExpressionValue? VisitConstantNode(CompilerContext context, ConstantNode node) {
+    protected ExpressionValue VisitConstantNode(CompilerContext context, ConstantNode node) {
         return new ConstantValue() { Value = node.Value} ;
     }
 
-    protected ExpressionValue? VisitAnyNode(CompilerContext context, AnyNode node)
+    protected ExpressionValue VisitAnyNode(CompilerContext context, AnyNode node)
     {
         Variable v = new Variable() {
             Name = node.CurrentRangeVariable.Name,
@@ -320,7 +328,7 @@ public class SemanticVisitor
         return new ExpressionValue();
     }
 
-    protected ExpressionValue? VisitAllNode(CompilerContext context, AllNode node)
+    protected ExpressionValue VisitAllNode(CompilerContext context, AllNode node)
     {
         Variable v = new Variable() {
             Name = node.CurrentRangeVariable.Name,
@@ -337,33 +345,33 @@ public class SemanticVisitor
         return new ExpressionValue();
     }
 
-    protected ExpressionValue? VisitResourceRangeVariableReferenceNode(CompilerContext context, ResourceRangeVariableReferenceNode node)
+    protected ExpressionValue VisitResourceRangeVariableReferenceNode(CompilerContext context, ResourceRangeVariableReferenceNode node)
     {
         return context.GetVariablesInScope().First(x => x.Name == node.Name);
     }
 
-    protected ExpressionValue? VisitSingleValueFunctionCallNode(CompilerContext context, SingleValueFunctionCallNode node) {
+    protected ExpressionValue VisitSingleValueFunctionCallNode(CompilerContext context, SingleValueFunctionCallNode node) {
         switch (node.Name.ToLowerInvariant())
         {
             case "contains":
                 context.AddFilter(new BinaryFilter() {
                     PropertyReference = (PropertyReference)VisitExpression(context, (SingleValueNode)node.Parameters.First())!,
                     OperatorKind = (BinaryOperatorKind)16,
-                    Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last())! as ConstantValue)!.Value!
+                    Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last())! as ConstantValue)?.Value
                 });
                 break;
             case "endswith":
                 context.AddFilter(new BinaryFilter() {
                     PropertyReference = (PropertyReference)VisitExpression(context, (SingleValueNode)node.Parameters.First())!,
                     OperatorKind = (BinaryOperatorKind)15,
-                    Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last()) as ConstantValue).Value
+                    Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last()) as ConstantValue)?.Value
                 });
                 break;
             case "startswith":
                 context.AddFilter(new BinaryFilter() {
                     PropertyReference = (PropertyReference)VisitExpression(context, (SingleValueNode)node.Parameters.First())!,
                     OperatorKind = (BinaryOperatorKind)14,
-                    Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last()) as ConstantValue).Value
+                    Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last()) as ConstantValue)?.Value
                 });
                 break;
             default:
@@ -413,7 +421,7 @@ public class SemanticVisitor
                 Type = orderByClause.RangeVariable.TypeReference.ToStructuredType().EnsureType(service)
             };
         context.OpenVariableScope(_it);
-        PropertyReference propertyRef =  (PropertyReference)VisitExpression(context, orderByClause.Expression, orderByClause.RangeVariable);
+        PropertyReference propertyRef = (PropertyReference)VisitExpression(context, orderByClause.Expression, orderByClause.RangeVariable);
         context.CloseVariableScope();
 
         context.AddOrderBy(propertyRef.ResourcePath,propertyRef.Property, orderByClause.Direction);
@@ -482,7 +490,7 @@ public class BinaryFilter : Filter
 {
     public PropertyReference PropertyReference {get; set;} = null!;
     public BinaryOperatorKind OperatorKind = BinaryOperatorKind.Equal;
-    public object Value = null!;
+    public object? Value = null;
 }
 
 public class AndFilter : Filter

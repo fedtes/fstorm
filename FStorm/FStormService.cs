@@ -11,10 +11,11 @@ namespace FStorm
             services.AddSingleton<EdmPathFactory>();
             services.AddTransient<Connection>();
             services.AddTransient<Transaction>();
-            services.AddTransient<Command, GetRequestCommand>();
+            services.AddTransient<Command>();
             services.AddTransient<Writer>();
             services.AddSingleton<SemanticVisitor>();
             services.AddTransient<IQueryBuilder, DelegatedQueryBuilder>();
+            services.AddTransient<IQueryExecutor, DelegateQueryExecutor>();
         }
     }
 
@@ -55,7 +56,7 @@ namespace FStorm
         public Connection OpenConnection(DbConnection SQLConnection)
         {
             var con = serviceProvider.GetService<Connection>()!;
-            con.connection = SQLConnection!;
+            con.DBConnection = SQLConnection!;
             con.Open();
             return con;
         }
@@ -63,7 +64,7 @@ namespace FStorm
         public async Task<Connection> OpenConnectionAsync(DbConnection SQLConnection)
         {
             var con = serviceProvider.GetService<Connection>()!;
-            con.connection = SQLConnection;
+            con.DBConnection = SQLConnection;
             await con.OpenAsync();
             return con;
         }

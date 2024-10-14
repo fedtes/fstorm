@@ -9,9 +9,8 @@ namespace FStorm
         private bool isOpen = false;
         private readonly IServiceProvider serviceProvider;
 
-        internal DbConnection connection = null!;
+        internal DbConnection DBConnection = null!;
         internal Transaction? transaction;
-        
 
         public Connection(IServiceProvider serviceProvider)
         {
@@ -25,7 +24,7 @@ namespace FStorm
             {
                 transaction = serviceProvider.GetService<Transaction>()!;
                 transaction.connection = this;
-                transaction.transaction = connection.BeginTransaction();
+                transaction.transaction = DBConnection.BeginTransaction();
                 return transaction;
             }
             else
@@ -40,7 +39,7 @@ namespace FStorm
             {
                 if (!isOpen)
                 {
-                    connection.Open();
+                    DBConnection.Open();
                     isOpen = true;
                 }
             }
@@ -56,7 +55,7 @@ namespace FStorm
             {
                 if (!isOpen)
                 {
-                    await connection.OpenAsync();
+                    await DBConnection.OpenAsync();
                     isOpen = true;
                 }
             }
@@ -72,7 +71,7 @@ namespace FStorm
             {
                 if (isOpen) 
                 { 
-                    connection.Close();
+                    DBConnection.Close();
                     isOpen = false;
                 }
             }
@@ -88,7 +87,7 @@ namespace FStorm
             {
                 if (isOpen)
                 {
-                    await connection.CloseAsync();
+                    await DBConnection.CloseAsync();
                     isOpen = false;
                 }
             }
@@ -107,6 +106,11 @@ namespace FStorm
             return cmd;
         }
 
+        internal int GetCommandTimeout()
+        {
+            return 30;
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
@@ -118,13 +122,13 @@ namespace FStorm
                         transaction.Dispose();
                     }
 
-                    if (connection != null)
+                    if (DBConnection != null)
                     {
                         if (isOpen)
                         {
-                            connection.Close();
+                            DBConnection.Close();
                         }
-                        connection.Dispose();
+                        DBConnection.Dispose();
                     }
                 }
                 disposedValue = true;
@@ -136,6 +140,7 @@ namespace FStorm
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+
     }
 
     public class Transaction : IDisposable

@@ -69,39 +69,14 @@ namespace FStorm.Test
             return edm;
         }
     
-    
-        public static void CreateDB(SqliteConnection sqlite)
-        {
-            var t = sqlite.BeginTransaction();
-            var cmd = sqlite.CreateCommand();
-            cmd.CommandText = "CREATE TABLE TABCustomers (CustomerID INT NOT NULL, RagSoc CHAR(50) NOT NULL, AddressID INT NULL); CREATE TABLE TABOrders (OrderNumber INT NOT NULL, Note CHAR(50) NOT NULL, Total decimal(10,5) NULL, CustomerID INT NOT NULL);";
-            cmd.Transaction = t;
-            cmd.ExecuteNonQuery();
-            t.Commit();
 
-            var t1 = sqlite.BeginTransaction();
-            var cmd1 = sqlite.CreateCommand();
-            cmd1.CommandText = "INSERT INTO TABCustomers (CustomerID,RagSoc) VALUES (1, 'ACME'),(2, 'ECorp'),(3, 'DreamSolutions');";
-            cmd1.Transaction = t1;
-            cmd1.ExecuteNonQuery();
-            t1.Commit();
-
-
-            var t2 = sqlite.BeginTransaction();
-            var cmd2 = sqlite.CreateCommand();
-            cmd2.CommandText = "INSERT INTO TABOrders (OrderNumber, Note, Total, CustomerID) VALUES (123,'Dynamite', 500.12, 1), (124,'TNT', 1250.00, 1);";
-            cmd2.Transaction = t2;
-            cmd2.ExecuteNonQuery();
-            t2.Commit();
-        }
-
-
-        
     }
 
     public class FakeConnection : DbConnection
     {
+#pragma warning disable CS8765 // Nullability of type of parameter doesn't match overridden member (possibly because of nullability attributes).
         public override string ConnectionString { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+#pragma warning restore CS8765 // Nullability of type of parameter doesn't match overridden member (possibly because of nullability attributes).
 
         public override string Database => throw new NotImplementedException();
 

@@ -1,4 +1,3 @@
-using System;
 using SqlKata;
 using SqlKata.Compilers;
 
@@ -7,12 +6,15 @@ namespace FStorm;
 public class DelegatedQueryBuilder : IQueryBuilder
 {
     private readonly Query _query;
+    private readonly FStormService service;
 
-    public DelegatedQueryBuilder() {
+    public DelegatedQueryBuilder(FStormService service) {
         _query = new SqlKata.Query();
+        this.service = service;
     }
 
-    public DelegatedQueryBuilder(SqlKata.Query query) {
+    public DelegatedQueryBuilder(FStormService service, SqlKata.Query query) {
+        this.service = service;
         this._query = query;
     }
 
@@ -96,7 +98,7 @@ public class DelegatedQueryBuilder : IQueryBuilder
 
     public IQueryBuilder Where(Func<IQueryBuilder, IQueryBuilder> where)
     {
-        _query.Where(q => ((DelegatedQueryBuilder)where(new DelegatedQueryBuilder(q)))._query);
+        _query.Where(q => ((DelegatedQueryBuilder)where(new DelegatedQueryBuilder(service, q)))._query);
         return this;
     }
 
@@ -118,17 +120,42 @@ public class DelegatedQueryBuilder : IQueryBuilder
         return this;
     }
 
-    public (string statement, Dictionary<string, object> bindings) Compile(SQLCompilerType compilerType){
+    public IQueryBuilder WhereNull(string column)
+    {
+        _query.WhereNull(column);
+        return this;
+    }
 
-        Compiler compiler = compilerType switch
+    public IQueryBuilder WhereNotNull(string column)
+    {
+        _query.WhereNotNull(column);
+        return this;
+    }
+
+    public SQLCompiledQuery Compile(){
+
+        Compiler compiler = service.options.SQLCompilerType switch
         {
             SQLCompilerType.MSSQL => new SqlServerCompiler(),
             SQLCompilerType.SQLLite => new SqliteCompiler(),
             _ => throw new ArgumentException("Unexpected compiler type value")
         };
         var _compilerOutput = compiler.Compile(_query);
-        return (_compilerOutput.Sql, _compilerOutput.NamedBindings);
+        return new DelegatedSQLCompiledQuery(_compilerOutput.Sql, _compilerOutput.NamedBindings, compiler, _query);
     }
 
+    
+}
 
+
+public class DelegatedSQLCompiledQuery : SQLCompiledQuery
+{
+    public DelegatedSQLCompiledQuery(string statement, Dictionary<string, object> bindings, Compiler compiler, Query query) : base(statement, bindings)
+    {
+        Compiler = compiler;
+        Query = query;
+    }
+
+    public Compiler Compiler { get; }
+    public Query Query { get; }
 }
