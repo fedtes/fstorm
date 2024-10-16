@@ -5,7 +5,7 @@ using Microsoft.OData.Edm;
 
 namespace FStorm.Test
 {
-    internal class MockModel
+    public class MockModel
     {
         public static EdmModel PrepareModel()
         {

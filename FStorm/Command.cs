@@ -1,4 +1,5 @@
-﻿using Microsoft.OData.UriParser;
+﻿using System.Text;
+using Microsoft.OData.UriParser;
 
 namespace FStorm
 {
@@ -11,17 +12,18 @@ namespace FStorm
         protected readonly FStormService fsService;
         protected readonly SemanticVisitor visitor;
         private readonly IQueryExecutor executor;
-
+        private readonly Writer writer;
         private CompilerContext context = null!;
 
         internal GetRequest Configuration { get; set; } = null!;
 
-        public Command(FStormService fStormService, SemanticVisitor visitor, IQueryExecutor executor) 
+        public Command(FStormService fStormService, SemanticVisitor visitor, IQueryExecutor executor, Writer writer) 
         {
             CommandId = Guid.NewGuid().ToString();
             this.fsService = fStormService;
             this.visitor = visitor;
             this.executor = executor;
+            this.writer = writer;
         }
 
         public SQLCompiledQuery ToSQL()
@@ -47,6 +49,20 @@ namespace FStorm
             }
             CreateContext();
             return this.executor.Execute(this.connection, this.context);
+        }
+
+        public async Task<string> ToODataString() 
+        {   using (var s = new MemoryStream())
+            {
+                await ToODataResponse(s);
+                StreamReader reader = new StreamReader(s);
+                return reader.ReadToEnd();
+            }
+        }
+        public async Task ToODataResponse(Stream s) 
+        {   
+            var data = await ToListAsync();
+            writer.WriteResult(context, data, s);
         }
     
     }
