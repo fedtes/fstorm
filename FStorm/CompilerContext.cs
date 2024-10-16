@@ -306,14 +306,15 @@ namespace FStorm
         internal void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
         {
             var p = Aliases.AddOrGet(edmPath);
-            ActiveQuery.Select($"{p}.{property.columnName} as {p}/{(customName ?? property.Name)}");
+            ActiveQuery.Select($"{p}.{property.columnName} as {customName ?? p + "/" + property.Name}");
         }
 
         internal void AddSelectKey(EdmPath? path, EdmEntityType? type)
         {
             ArgumentNullException.ThrowIfNull(path);
             ArgumentNullException.ThrowIfNull(type);
-            this.AddSelect(path, type.GetEntityKey(), ":key");
+            var p = Aliases.AddOrGet(path);
+            this.AddSelect(path, type.GetEntityKey(), $"{p}/:key");
         }
 
         internal void AddSelectAll(EdmPath? path, EdmEntityType? type) 

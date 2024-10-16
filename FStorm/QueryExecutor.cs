@@ -12,7 +12,10 @@ namespace FStorm
             */
             static IDictionary<string, object> CleanOutput(IDictionary<string, object> x)
             {
-                x.Remove(x.Keys.First(y => y.EndsWith("/:key")));
+                if (x.Keys.Any(y => y.EndsWith("/:key")))
+                {
+                    x.Remove(x.Keys.First(y => y.EndsWith("/:key")));
+                }
                 return x.ToDictionary(y => y.Key.Substring(y.Key.LastIndexOf("/") + 1), y => y.Value);
             }
 

@@ -145,7 +145,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { RequestPath = "Customers(1)/Orders/$filter(Total gt 100)" })
                 .ToSQL();
 
-            string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM (SELECT [P2].[OrderNumber] AS [P2/OrderNumber], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P1] WHERE [P1].[Total] > @p1";
+            string expected = @"SELECT [P1].[OrderNumber] AS [P1/:key], [P1].[OrderNumber] AS [P1/Number], [P1].[OrderDate] AS [P1/OrderDate], [P1].[Note] AS [P1/Note], [P1].[Total] AS [P1/Total], [P1].[DeliveryAddressID] AS [P1/DeliveryAddressID], [P1].[CustomerID] AS [P1/CustomerID] FROM (SELECT [P2].[OrderNumber] AS [OrderNumber], [P2].[OrderDate] AS [OrderDate], [P2].[Note] AS [Note], [P2].[Total] AS [Total], [P2].[DeliveryAddressID] AS [DeliveryAddressID], [P2].[CustomerID] AS [CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P1] WHERE [P1].[Total] > @p1";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 
@@ -157,7 +157,7 @@ namespace FStorm.Test
                 .Get(new GetRequest() { RequestPath = "Customers(1)/Orders/$filter(Total gt 100)/1/OrderDate" })
                 .ToSQL();
 
-            string expected = @"SELECT [P1].[OrderDate] AS [P1/OrderDate], [P1].[OrderNumber] AS [P1/:key] FROM (SELECT [P2].[OrderNumber] AS [P2/OrderNumber], [P2].[OrderDate] AS [P2/OrderDate], [P2].[Note] AS [P2/Note], [P2].[Total] AS [P2/Total], [P2].[DeliveryAddressID] AS [P2/DeliveryAddressID], [P2].[CustomerID] AS [P2/CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P1] WHERE [P1].[Total] > @p1 AND [P1].[OrderNumber] = @p2";
+            string expected = @"SELECT [P1].[OrderDate] AS [P1/OrderDate], [P1].[OrderNumber] AS [P1/:key] FROM (SELECT [P2].[OrderNumber] AS [OrderNumber], [P2].[OrderDate] AS [OrderDate], [P2].[Note] AS [Note], [P2].[Total] AS [Total], [P2].[DeliveryAddressID] AS [DeliveryAddressID], [P2].[CustomerID] AS [CustomerID] FROM [TABCustomers] AS [P1] LEFT JOIN [TABOrders] AS [P2] ON [P2].[CustomerID] = [P1].[CustomerID] WHERE [P1].[CustomerID] = @p0) AS [P1] WHERE [P1].[Total] > @p1 AND [P1].[OrderNumber] = @p2";
             Assert.That(_SqlQuery.Statement.Replace("\n", ""), Is.EqualTo(expected));
         }
 

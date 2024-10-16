@@ -52,6 +52,42 @@ namespace FStorm.Test
             Assert.That(r[2]["RagSoc"], Is.EqualTo("DreamSolutions"));
         }
 
+
+        [Test]
+        [TestCase("Customers/$count","3")]
+        [TestCase("Orders/$count","1000")]
+        [TestCase("Customers(1)/Orders/$count","343")]
+        [TestCase("Orders/$count?$filter=Customer/ID eq 1","343")]
+        [TestCase("Orders/$count?$filter=CustomerID eq 1","343")]
+        [TestCase("Orders/$filter(CustomerID eq 1)/$count","343")]
+        [TestCase("Orders/$count?$filter=CustomerID eq 1 and Total gt 5000","176")]
+        [TestCase("Customers(1)/Orders/$count?$filter=Total gt 5000","176")]
+        [TestCase("Customers(1)/Orders/$count?$filter=Total gt 5000 and Articles/any(x:x/Name eq 'Wrangler')","2")]
+        [TestCase("Orders/$count?$filter=CustomerID eq 1 or CustomerID eq 2","681")]
+        public async Task It_Should_execute_count(string req, string exp)
+        {
+            
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var con = _FStormService.OpenConnection(connection);
+            
+            var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
+            Assert.That(r.First()["count"].ToString(), Is.EqualTo(exp));
+        }
+
+        [Test]
+        [TestCase("Customers(2)?$select=RagSoc",1,"ECorp")]
+        [TestCase("Orders?$select=Number, OrderDate, Note&$top=1&$orderby=OrderDate desc, Number desc", 3, "832")]
+        [TestCase("Orders?$select=Note&$top=10&$filter=startswith(Note,'Major')&$orderby=Number desc", 1, "Major Pharmaceuticals")]
+        public async Task It_Should_execute_select(string req,int colCount, string exp)
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var con = _FStormService.OpenConnection(connection);
+            
+            var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
+            Assert.That(r.First().Count, Is.EqualTo(colCount));
+            Assert.That(r.First().First().Value.ToString(), Is.EqualTo(exp));
+        }
+
         // [Test]
         // public async Task It_Should_read_entity_single()
         // {
