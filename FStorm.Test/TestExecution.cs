@@ -72,8 +72,6 @@ namespace FStorm.Test
             
             var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
             Assert.That(r.First()["count"].ToString(), Is.EqualTo(exp));
-
-            var s = await con.Get(new GetRequest() { RequestPath = req }).ToODataString();
         }
 
         [Test]

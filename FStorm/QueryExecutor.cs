@@ -10,6 +10,8 @@ namespace FStorm
             
             object? EnsureType(string s,object o)
             {
+                if (context.GetOutputKind() == OutputKind.RawValue)
+                    return o;
                 var s1 = s.Split("/");
                 EdmPath p = context.Aliases.TryGet(s1[0])!;
                 return Helpers.TypeConverter(o, (p + s1[1]).GetTypeKind());
