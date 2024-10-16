@@ -1,3 +1,4 @@
+using System.IO;
 using FStorm;
 using FStorm.Test;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -15,7 +16,14 @@ internal class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
-        builder.Services.AddFStorm(MockModel.PrepareModel(), new FStormOptions() {SQLCompilerType = SQLCompilerType.SQLLite, ServiceRoot = "http://localhost:5056/"});
+        builder.Services.AddFStorm(
+            MockModel.PrepareModel(), 
+            new FStormOptions() 
+            {
+                SQLCompilerType = SQLCompilerType.SQLLite, 
+                ServiceRoot = "http://localhost:5056/odata/v1/"
+            }
+        );
 
 
         var app = builder.Build();
@@ -28,17 +36,20 @@ internal class Program
         // }
 
 
-        app.MapGet("{res}", async (HttpContext context) =>
+        app.MapGet("odata/v1/{*resourse}", async (HttpContext context) =>
         {
-            var connection = new SqliteConnection("Data Source=.\\MockData;");
+            var connectionString =  app.Environment.IsDevelopment() ? "Data Source=.\\bin\\Debug\\net8.0\\MockData;" : ".\\MockData;" ; 
+            var connection = new SqliteConnection(connectionString);
             var _odata = context.RequestServices.GetService<FStormService>()!;
             using (var con = _odata.OpenConnection(connection))
             {
-                 await con.Get(new GetRequest() {RequestPath = context.Request.Path}).ToODataResponse(context.Response.Body);
+                using (var _stream = new MemoryStream())
+                {
+                    await con.Get(new GetRequest() {RequestPath = context.Request.Path + context.Request.QueryString.Value}).ToODataResponse(_stream);
+                    return Results.Text(_stream.ToArray(),"application/json");
+                }
             }
-        })
-        .WithName("GetWeatherForecast")
-        .WithOpenApi();
+        });;
 
         app.Run();
     }

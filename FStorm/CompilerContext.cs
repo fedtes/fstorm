@@ -17,7 +17,7 @@ namespace FStorm
         /// <summary>
         /// List of all aliases used in the From clause
         /// </summary>
-        private AliasStore Aliases {get => MainScope.Aliases; }
+        internal AliasStore Aliases {get => MainScope.Aliases; }
         private OutputKind outputKind;
         private EdmPath? resourcePath = null;
         private EdmEntityType? resourceEdmType = null;
@@ -507,6 +507,11 @@ namespace FStorm
 
             public bool Contains(EdmPath path) {
                 return aliases.ContainsKey(path);
+            }
+
+            internal EdmPath? TryGet(string v)
+            {
+                return aliases.FirstOrDefault(x => x.Value == v).Key;
             }
         }
 

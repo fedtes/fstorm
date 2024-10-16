@@ -152,7 +152,7 @@ namespace FStorm
                 return null;
             } 
             if (_elements.Count == 1) {
-                var (a,b) = _elements[_elements.Count-1];
+                var (a,b) = _elements[0];
                 if (b is IEdmEntitySet entitySet)
                 {
                     return (EdmEntityType)entitySet.EntityType.AsElementType();
@@ -171,7 +171,7 @@ namespace FStorm
                 }
                 else if (b is IEdmNavigationProperty property) 
                 {
-                    return property.DeclaringType.EnsureType(this.fStormService);
+                    return property.Type.Definition.AsElementType().EnsureType(this.fStormService);
                 } else 
                 {
                     throw new InvalidOperationException($"Path {this.ToString()} do not refers to any valid EntityType.");
