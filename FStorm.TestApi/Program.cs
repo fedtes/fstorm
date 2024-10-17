@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.IO;
 using FStorm;
 using FStorm.Test;
@@ -8,6 +9,9 @@ using Microsoft.Data.Sqlite;
 
 internal class Program
 {
+
+    
+
     private static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -34,14 +38,41 @@ internal class Program
         //     app.UseSwagger();
         //     app.UseSwaggerUI();
         // }
+        app.UseOdata("odata/v1", (s) => new SqliteConnection(app.Environment.IsDevelopment() ? "Data Source=.\\bin\\Debug\\net8.0\\MockData;" : ".\\MockData;"));
+
+        // app.MapGet("odata/v1/{*resourse}", async (HttpContext context) =>
+        // {
+        //     var connectionString =  app.Environment.IsDevelopment() ? "Data Source=.\\bin\\Debug\\net8.0\\MockData;" : ".\\MockData;" ; 
+        //     var connection = new SqliteConnection(connectionString);
+        //     var _odata = context.RequestServices.GetService<FStormService>()!;
+        //     using (var con = _odata.OpenConnection(connection))
+        //     {
+        //         using (var _stream = new MemoryStream())
+        //         {
+        //             await con.Get(new GetRequest() {RequestPath = context.Request.Path + context.Request.QueryString.Value}).ToODataResponse(_stream);
+        //             return Results.Text(_stream.ToArray(),"application/json");
+        //         }
+        //     }
+        // });
+
+        app.Run();
+    }
+}
 
 
-        app.MapGet("odata/v1/{*resourse}", async (HttpContext context) =>
-        {
-            var connectionString =  app.Environment.IsDevelopment() ? "Data Source=.\\bin\\Debug\\net8.0\\MockData;" : ".\\MockData;" ; 
-            var connection = new SqliteConnection(connectionString);
+public static class Extensions
+{
+    public static void UseOdata(this IEndpointRouteBuilder app, string basePath, Func<IServiceProvider, DbConnection> connectionFactory)
+    {
+        app.MapGet(basePath, (HttpContext context) => {
             var _odata = context.RequestServices.GetService<FStormService>()!;
-            using (var con = _odata.OpenConnection(connection))
+            return Results.Text(_odata.GetServiceDocument());
+        });
+
+        app.MapGet(basePath + "/{*resourse}", async (HttpContext context) =>
+        {
+            var _odata = context.RequestServices.GetService<FStormService>()!;
+            using (var con = _odata.OpenConnection(connectionFactory(context.RequestServices)))
             {
                 using (var _stream = new MemoryStream())
                 {
@@ -49,8 +80,6 @@ internal class Program
                     return Results.Text(_stream.ToArray(),"application/json");
                 }
             }
-        });;
-
-        app.Run();
+        });
     }
 }

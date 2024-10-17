@@ -65,6 +65,9 @@ namespace FStorm.Test
             EdmEntityContainer container = edm.AddEntityContainer("my", "default");
             container.AddEntitySet("Customers", customerType);
             container.AddEntitySet("Orders", orderType);
+            container.AddEntitySet("Adresses", addressType);
+            container.AddEntitySet("AddressHints", addressHintType);
+            container.AddEntitySet("Articles", articleType);
 
             return edm;
         }

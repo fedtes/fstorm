@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData.Edm.Csdl;
+using Microsoft.OData.Edm.Validation;
 using System.Data.Common;
+using System.Xml;
 
 namespace FStorm
 {
@@ -52,6 +55,19 @@ namespace FStorm
 
         public EdmModel Model { get; }
         public Uri ServiceRoot { get; }
+
+        public string GetServiceDocument()
+        {
+            using (var sb = new StringWriter())
+            {
+                using (var writer = XmlWriter.Create(sb))
+                {
+                    IEnumerable<EdmError> errors;
+                    CsdlWriter.TryWriteCsdl(Model, writer, CsdlTarget.OData, out errors);
+                }
+                return sb.ToString();
+            }
+        }
 
         public Connection OpenConnection(DbConnection SQLConnection)
         {
