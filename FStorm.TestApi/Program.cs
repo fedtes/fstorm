@@ -64,9 +64,21 @@ public static class Extensions
 {
     public static void UseOdata(this IEndpointRouteBuilder app, string basePath, Func<IServiceProvider, DbConnection> connectionFactory)
     {
+
         app.MapGet(basePath, (HttpContext context) => {
             var _odata = context.RequestServices.GetService<FStormService>()!;
-            return Results.Text(_odata.GetServiceDocument());
+            using (var _stream = new MemoryStream())
+            {   
+                _odata.GetServiceDocument(_stream);
+                context.Response.Headers.TryAdd("OData-Version","4.0");
+                return Results.Text(_stream.ToArray(),"application/json");
+            }
+            //return Results.Text(_odata.GetMetadataDocument());
+        });
+
+        app.MapGet(basePath + "/$metadata", (HttpContext context) => {
+            var _odata = context.RequestServices.GetService<FStormService>()!;
+            return Results.Text(_odata.GetMetadataDocument(),"application/xml",System.Text.Encoding.Unicode);
         });
 
         app.MapGet(basePath + "/{*resourse}", async (HttpContext context) =>

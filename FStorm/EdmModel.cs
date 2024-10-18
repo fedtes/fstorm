@@ -172,8 +172,8 @@ namespace FStorm
                 ContainsTarget = multiplicity == EdmMultiplicity.One ? true : false,
                 Target = targetType,
                 TargetMultiplicity = multiplicity,
-                PrincipalProperties = new List<IEdmStructuralProperty>() { sourceProperty },
-                DependentProperties = new List<IEdmStructuralProperty>() { targetProperty },
+                PrincipalProperties = new List<IEdmStructuralProperty>() { targetProperty },
+                DependentProperties = new List<IEdmStructuralProperty>() { sourceProperty },
                 OnDelete = EdmOnDeleteAction.None
             });
         }

@@ -21,7 +21,7 @@ namespace FStorm.Test
             //Order
             EdmEntityType orderType = edm.AddEntityType("my", "Order", "TABOrders");
             EdmStructuralProperty orderKey = orderType.AddStructuralProperty("Number", EdmPrimitiveTypeKind.String, false, "OrderNumber");
-            EdmStructuralProperty orderDate = orderType.AddStructuralProperty("OrderDate", EdmPrimitiveTypeKind.Date, false);
+            EdmStructuralProperty orderDate = orderType.AddStructuralProperty("OrderDate", EdmPrimitiveTypeKind.String, false);
             EdmStructuralProperty orderNote = orderType.AddStructuralProperty("Note", EdmPrimitiveTypeKind.String, true);
             EdmStructuralProperty total = orderType.AddStructuralProperty("Total", EdmPrimitiveTypeKind.Decimal, false);
             EdmStructuralProperty deliveryAddressID = orderType.AddStructuralProperty("DeliveryAddressID", EdmPrimitiveTypeKind.Int32, true);

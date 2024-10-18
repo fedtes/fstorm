@@ -41,7 +41,7 @@ namespace FStorm
 
         protected virtual SQLCompiledQuery Compile(CompilerContext context) =>  context.Compile();
 
-        public Task<IEnumerable<IDictionary<string, object>>> ToListAsync()
+        public Task<IEnumerable<IDictionary<string, object?>>> ToListAsync()
         {
             if (connection == null || this.transaction == null)
             {

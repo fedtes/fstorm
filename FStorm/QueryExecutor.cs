@@ -4,7 +4,7 @@ namespace FStorm
 {
     public class DelegateQueryExecutor : IQueryExecutor
     {
-        public async Task<IEnumerable<IDictionary<string, object>>> Execute(Connection connection, CompilerContext context)
+        public async Task<IEnumerable<IDictionary<string, object?>>> Execute(Connection connection, CompilerContext context)
         {
             DelegatedSQLCompiledQuery compiledQuery = (DelegatedSQLCompiledQuery)context.Compile();
             
@@ -19,7 +19,7 @@ namespace FStorm
             /*
             Remove "junk" info added during the builder. These info are not used here so they are removed. In other contexts these info are used to recover some metadata.
             */
-            IDictionary<string, object> CleanOutput(IDictionary<string, object> x)
+            IDictionary<string, object?> CleanOutput(IDictionary<string, object> x)
             {
                 if (x.Keys.Any(y => y.EndsWith("/:key")))
                 {

@@ -56,7 +56,7 @@ namespace FStorm
         public EdmModel Model { get; }
         public Uri ServiceRoot { get; }
 
-        public string GetServiceDocument()
+        public string GetMetadataDocument()
         {
             using (var sb = new StringWriter())
             {
@@ -67,6 +67,23 @@ namespace FStorm
                 }
                 return sb.ToString();
             }
+        }
+
+        public void GetServiceDocument(Stream _stream)
+        {
+            var writer = serviceProvider.GetService<Writer>()!;
+            writer.WriteServiceDocument(_stream);
+            
+            
+            // using (var sb = new StringWriter())
+            // {
+            //     using (var writer = XmlWriter.Create(sb))
+            //     {
+            //         IEnumerable<EdmError> errors;
+            //         CsdlWriter.TryWriteCsdl(Model, writer, CsdlTarget.OData, out errors);
+            //     }
+            //     return sb.ToString();
+            // }
         }
 
         public Connection OpenConnection(DbConnection SQLConnection)

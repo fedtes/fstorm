@@ -65,7 +65,7 @@ namespace FStorm
 
         public static (EdmStructuralProperty sourceProperty, EdmStructuralProperty targetProperty) GetRelationProperties(this EdmNavigationProperty property) {
             var constraint = property.ReferentialConstraint.PropertyPairs.First();
-            return ((EdmStructuralProperty)constraint.PrincipalProperty, (EdmStructuralProperty)constraint.DependentProperty);
+            return ((EdmStructuralProperty)constraint.DependentProperty, (EdmStructuralProperty)constraint.PrincipalProperty);
         }
 
     }

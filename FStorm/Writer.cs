@@ -37,7 +37,7 @@ namespace FStorm
         }
 
 
-        public void WriteResult(CompilerContext context ,IEnumerable<IDictionary<string, object>> data, Stream stream)
+        public void WriteResult(CompilerContext context ,IEnumerable<IDictionary<string, object?>> data, Stream stream)
         {
             Message message = new Message(stream);
             ODataMessageWriterSettings settings = new ODataMessageWriterSettings();
@@ -79,7 +79,7 @@ namespace FStorm
             // return reader.ReadToEnd();
         }
 
-        protected void WriteCollection(ODataWriter odataWriter, IEnumerable<IDictionary<string, object>> data) 
+        protected void WriteCollection(ODataWriter odataWriter, IEnumerable<IDictionary<string, object?>> data) 
         {
             ODataResourceSet set = new ODataResourceSet();
             odataWriter.WriteStart(set);
@@ -90,13 +90,13 @@ namespace FStorm
             odataWriter.WriteEnd();
         }
 
-        protected void WriteObject(ODataWriter odataWriter, IDictionary<string, object> record) 
+        protected void WriteObject(ODataWriter odataWriter, IDictionary<string, object?> record) 
         {
             ODataResource entity = new ODataResource();
             List<ODataProperty> entityProperties = new List<ODataProperty>();
             foreach (var prop in record)
             {
-                if (prop.Value is IEnumerable<IDictionary<string, object>> subRecords)
+                if (prop.Value != null && prop.Value is IEnumerable<IDictionary<string, object?>> subRecords)
                 {
                     odataWriter.WriteStart(new ODataNestedResourceInfo
                     {
@@ -106,7 +106,7 @@ namespace FStorm
                     WriteCollection(odataWriter, subRecords);
                     odataWriter.WriteEnd();
                 }
-                else if (prop.Value is IDictionary<string, object> subRecord)
+                else if (prop.Value != null && prop.Value is IDictionary<string, object?> subRecord)
                 {
                     odataWriter.WriteStart(new ODataNestedResourceInfo
                     {
@@ -125,5 +125,31 @@ namespace FStorm
             odataWriter.WriteStart(entity);
             odataWriter.WriteEnd();
         }
+    
+    
+    
+        internal void WriteServiceDocument(Stream stream)
+        {
+            Message message = new Message(stream);
+            ODataMessageWriterSettings settings = new ODataMessageWriterSettings();
+            settings.ODataUri = new ODataUri 
+            { 
+                ServiceRoot = new Uri(service.options.ServiceRoot)
+            };
+            ODataMessageWriter writer = new ODataMessageWriter(message, settings);
+            writer.WriteServiceDocument(service.Model.GenerateServiceDocument());
+            //ODataServiceDocument serviceDocument = new ODataServiceDocument();
+            // serviceDocument.EntitySets = service.Model.EntityContainer.EntitySets()
+            //     .Select(x => {
+            //         return new ODataEntitySetInfo()
+            //         {
+            //             Name = x.Name,
+            //             Title = x.Name,
+            //             Url = new Uri("Customers", UriKind.Relative),
+            //         };
+            //     })
+            //     .ToArray();
+        }
+    
     }
 }
