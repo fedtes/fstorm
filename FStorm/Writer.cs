@@ -65,11 +65,8 @@ namespace FStorm
                     WriteObject(writer.CreateODataResourceWriter(entitySet), data.First());
                     break;
                 case OutputKind.RawValue:
-                    throw new NotImplementedException();
-                    // if (result.Value != null) {
-                    //     writer.WriteValue(result.Value.First().First().Value);
-                    // }
-                    // break;
+                    writer.WriteValue(data.First().First().Value);
+                    break;
                 default:
                     break;
             }
@@ -94,35 +91,36 @@ namespace FStorm
         {
             ODataResource entity = new ODataResource();
             List<ODataProperty> entityProperties = new List<ODataProperty>();
-            foreach (var prop in record)
+
+
+            foreach (var prop in record.Where(p => !(p.Value is IEnumerable<IDictionary<string, object?>> || p.Value is IDictionary<string, object?>)))
             {
-                if (prop.Value != null && prop.Value is IEnumerable<IDictionary<string, object?>> subRecords)
-                {
-                    odataWriter.WriteStart(new ODataNestedResourceInfo
-                    {
-                        Name = prop.Key,
-                        IsCollection = true
-                    });
-                    WriteCollection(odataWriter, subRecords);
-                    odataWriter.WriteEnd();
-                }
-                else if (prop.Value != null && prop.Value is IDictionary<string, object?> subRecord)
-                {
-                    odataWriter.WriteStart(new ODataNestedResourceInfo
-                    {
-                        Name = prop.Key,
-                        IsCollection = false
-                    });
-                    WriteObject(odataWriter, subRecord);
-                    odataWriter.WriteEnd();
-                }
-                else 
-                {
-                    entityProperties.Add(new ODataProperty() { Name = prop.Key, Value = prop.Value });
-                }
+                entityProperties.Add(new ODataProperty() { Name = prop.Key, Value = prop.Value });
             }
             entity.Properties= entityProperties;
             odataWriter.WriteStart(entity);
+
+            foreach(var prop in record.Where(p => p.Value is IDictionary<string, object?>))
+            {
+                odataWriter.WriteStart(new ODataNestedResourceInfo
+                {
+                    Name = prop.Key,
+                    IsCollection = false
+                });
+                WriteObject(odataWriter, (IDictionary<string, object?>)prop.Value ?? new Dictionary<string,object?>());
+                odataWriter.WriteEnd();
+            }
+
+            foreach(var prop in record.Where(p => p.Value is IEnumerable<IDictionary<string, object?>>))
+            {
+                odataWriter.WriteStart(new ODataNestedResourceInfo
+                {
+                    Name = prop.Key,
+                    IsCollection = true
+                });
+                WriteCollection(odataWriter, (IEnumerable<IDictionary<string, object?>>)prop.Value ?? Enumerable.Empty<IDictionary<string, object?>>());
+                odataWriter.WriteEnd();
+            }
             odataWriter.WriteEnd();
         }
     
@@ -138,17 +136,6 @@ namespace FStorm
             };
             ODataMessageWriter writer = new ODataMessageWriter(message, settings);
             writer.WriteServiceDocument(service.Model.GenerateServiceDocument());
-            //ODataServiceDocument serviceDocument = new ODataServiceDocument();
-            // serviceDocument.EntitySets = service.Model.EntityContainer.EntitySets()
-            //     .Select(x => {
-            //         return new ODataEntitySetInfo()
-            //         {
-            //             Name = x.Name,
-            //             Title = x.Name,
-            //             Url = new Uri("Customers", UriKind.Relative),
-            //         };
-            //     })
-            //     .ToArray();
         }
     
     }

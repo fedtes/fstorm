@@ -144,7 +144,11 @@ public class DelegatedQueryBuilder : IQueryBuilder
         return new DelegatedSQLCompiledQuery(_compilerOutput.Sql, _compilerOutput.NamedBindings, compiler, _query);
     }
 
-    
+    IQueryBuilder IQueryBuilder.Include(string relationName, IQueryBuilder query, string foreignKey, string localKey, bool isMany)
+    {
+        _query.Include(relationName, ((DelegatedQueryBuilder)query)._query, foreignKey, localKey,isMany);
+        return this;
+    }
 }
 
 

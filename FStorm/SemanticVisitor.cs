@@ -94,17 +94,19 @@ public class SemanticVisitor
 
     protected EdmPath VisitNavigationPropertySegment(CompilerContext context, NavigationPropertySegment navigationPropertySegment, EdmPath currentPath) 
     {
-
-        EdmPath alias = context.AddJoin(
-            (EdmNavigationProperty)navigationPropertySegment.NavigationProperty,
-            currentPath,
-            currentPath + navigationPropertySegment.NavigationProperty.Name
-        );
-
-        //context.SetOutputKind(navigationPropertySegment.EdmType.TypeKind == EdmTypeKind.Collection ? OutputKind.Collection : OutputKind.Object);
-        //context.SetOutputType((EdmEntityType)navigationPropertySegment.EdmType.AsElementType());
-        //context.SetOutputPath(alias);
-        return alias;
+        if (!context.HasFrom())
+        {
+            EdmPath alias = context.AddFrom((EdmEntityType)navigationPropertySegment.EdmType.AsElementType(), currentPath);
+            return alias;
+        }
+        else {
+            EdmPath alias = context.AddJoin(
+                (EdmNavigationProperty)navigationPropertySegment.NavigationProperty,
+                currentPath,
+                currentPath + navigationPropertySegment.NavigationProperty.Name
+            );
+            return alias;
+        }
     }
 
     protected EdmPath VisitKeySegment(CompilerContext context, KeySegment keySegment, EdmPath currentPath) 
@@ -157,25 +159,45 @@ public class SemanticVisitor
 #endregion
 
 #region "Visit Select Expand"
+    protected void VisitExpandedItems(CompilerContext context, ExpandedNavigationSelectItem i) {
+        CompilerContext expansionContext = new CompilerContext(service, i.PathToNavigationProperty, i.FilterOption, i.SelectAndExpand,i.OrderByOption, new PaginationClause(i.TopOption,i.SkipOption));
+        expansionContext.SetOutputPath(context.GetOutputPath()! + i.NavigationSource.Name);
+        VisitContext(expansionContext);
+        var _firstSegment = (NavigationPropertySegment)i.PathToNavigationProperty.FirstSegment;
+        context.Include((EdmNavigationProperty)_firstSegment.NavigationProperty,expansionContext);
+    }
+
     protected bool VisitSelectAndExpand(CompilerContext context, SelectExpandClause selectExpandClause)
     {
         if (selectExpandClause != null )
         {
-            foreach (var item in selectExpandClause.SelectedItems)
+            if (selectExpandClause.AllSelected && selectExpandClause.SelectedItems.Count() == 0) 
             {
-                switch (item)
-                {
-                    case PathSelectItem i:
-                        VisitPath(context, i.SelectedPath, context.GetOutputPath());
-                        break;
-                    case ExpandedNavigationSelectItem i:
-                        break;
-                    case WildcardSelectItem i:
-                        context.AddSelectAll(context.GetOutputPath(), context.GetOutputType());
-                        break;
-                }
+                context.AddSelectAll(context.GetOutputPath(), context.GetOutputType());
+                return true;
             }
-            return true;
+            else 
+            {
+                bool handled = false;
+                foreach (var item in selectExpandClause.SelectedItems)
+                {
+                    switch (item)
+                    {
+                        case PathSelectItem i:
+                            VisitPath(context, i.SelectedPath, context.GetOutputPath());
+                            handled = true;
+                            break;
+                        case ExpandedNavigationSelectItem i:
+                            VisitExpandedItems(context, i);
+                            break;
+                        case WildcardSelectItem i:
+                            context.AddSelectAll(context.GetOutputPath(), context.GetOutputType());
+                            handled = true;
+                            break;
+                    }
+                }
+                return handled;
+            }
         }
 
         return false;

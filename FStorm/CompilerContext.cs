@@ -28,6 +28,8 @@ namespace FStorm
         private readonly OrderByClause orderBy;
         private readonly PaginationClause pagination;
 
+        private Dictionary<string, CompilerContext> subcontextes= new Dictionary<string, CompilerContext>();
+
         public CompilerContext(FStormService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination) {
             this.service = service;
             this.oDataPath= oDataPath;
@@ -66,6 +68,8 @@ namespace FStorm
             SetOutputType(ResourcePath.GetEdmEntityType()); 
         }
 
+        internal bool HasFrom() => MainScope.HasFromClause;
+
         internal EdmEntityType? GetOutputType() => resourceEdmType;
         internal void SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
 
@@ -79,6 +83,14 @@ namespace FStorm
 
         internal Variable? GetCurrentVariableInScope() {
             return scope.FirstOrDefault(x => x.ScopeType == CompilerScope.VARIABLE)?.Variable;
+        }
+
+        internal CompilerContext GetSubContext(string name)
+        {
+            if (subcontextes.ContainsKey(name))
+                return subcontextes[name];
+            else
+                throw new ArgumentException($"Subcontext with name {name} not found", nameof(name));
         }
 
 #region "scope manipulation"
@@ -290,6 +302,7 @@ namespace FStorm
         {
             var p = Aliases.AddOrGet(edmPath);
             this.MainQuery.From(edmEntityType.Table + " as " + p.ToString());
+            this.MainScope.HasFromClause=true;
             return edmPath;
         }
 
@@ -430,6 +443,19 @@ namespace FStorm
             SetMainQuery(tmpctx.ActiveQuery.From(this.ActiveQuery, a), tmpctx.Aliases);
         }
 
+        internal void Include(EdmNavigationProperty rightNavigationProperty, CompilerContext expansionContext)
+        {
+            var name = expansionContext.GetOutputPath()!.ToString().Replace("~", "$expand");
+            var (sourceProperty, targetProperty) = rightNavigationProperty.GetRelationProperties();
+            // ensure select
+            string localKeyAlias = name + "/:fkey";
+            this.AddSelect(this.GetOutputPath()!, sourceProperty, localKeyAlias);
+            string foreignKeyAlias = name + "/:fkey";
+            expansionContext.AddSelect(expansionContext.GetOutputPath()!, targetProperty, foreignKeyAlias);
+            MainQuery.Include(name, expansionContext.ActiveQuery, localKeyAlias, foreignKeyAlias, expansionContext.GetOutputKind() == OutputKind.Collection);
+            subcontextes.Add(name, expansionContext);
+        }
+
         #endregion
 
 
@@ -529,8 +555,8 @@ namespace FStorm
             public readonly IQueryBuilder Query;
             public readonly string ScopeType;
             public readonly Variable? Variable;
-
             public readonly AliasStore Aliases;
+            public bool HasFromClause = false;
 
             internal CompilerScope(string scopeType, IQueryBuilder query){
                 ScopeType = scopeType;

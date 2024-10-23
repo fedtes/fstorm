@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Data.Sqlite;
+using System.Collections;
 
 namespace FStorm.Test
 {
@@ -86,9 +87,35 @@ namespace FStorm.Test
             var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
             Assert.That(r.First().Count, Is.EqualTo(colCount));
             Assert.That(r.First()?.First().Value?.ToString(), Is.EqualTo(exp));
-
-            var s = await con.Get(new GetRequest() { RequestPath = req }).ToODataString();
         }
+
+        [Test]
+        [TestCase("Customers?$expand=Address")]
+        [TestCase("Customers(1)?$expand=Address")]
+        public async Task It_Should_execute_expand(string req)
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var con = _FStormService.OpenConnection(connection);
+            var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
+            Assert.That(r[0]["RagSoc"], Is.EqualTo("ACME"));
+            Assert.That((r[0]["Address"] as Dictionary<string,object>)["Country"], Is.EqualTo("Indonesia"));
+        }
+
+        [Test]
+        [TestCase("Customers(1)?$expand=Orders", 343)]
+        [TestCase("Customers(1)?$expand=Orders($top=10)", 10)]
+        [TestCase("Customers(1)?$expand=Orders($filter=Total le 1000)", 33)]
+        [TestCase("Customers(1)?$expand=Orders($top=10;$expand=DeliveryAddress)", 10)]
+        public async Task It_Should_execute_expand_2(string req, int cnt)
+        {
+            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var con = _FStormService.OpenConnection(connection);
+            var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
+            Assert.That(r[0]["RagSoc"], Is.EqualTo("ACME"));
+            Assert.That((r[0]["Orders"] as IList).Count, Is.EqualTo(cnt));
+        }
+
+
 
         // [Test]
         // public async Task It_Should_read_entity_single()
