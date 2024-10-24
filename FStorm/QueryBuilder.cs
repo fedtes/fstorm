@@ -149,6 +149,12 @@ public class DelegatedQueryBuilder : IQueryBuilder
         _query.Include(relationName, ((DelegatedQueryBuilder)query)._query, foreignKey, localKey,isMany);
         return this;
     }
+
+    IQueryBuilder IQueryBuilder.WhereIn(string column, object?[] values)
+    {
+        _query.WhereIn(column, values);
+        return this;
+    }
 }
 
 

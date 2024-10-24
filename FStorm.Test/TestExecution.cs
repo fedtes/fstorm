@@ -98,7 +98,7 @@ namespace FStorm.Test
             var con = _FStormService.OpenConnection(connection);
             var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
             Assert.That(r[0]["RagSoc"], Is.EqualTo("ACME"));
-            Assert.That((r[0]["Address"] as Dictionary<string,object>)["Country"], Is.EqualTo("Indonesia"));
+            Assert.That((r[0]["Address"] as IDictionary<string,object?>)["Country"], Is.EqualTo("Indonesia"));
         }
 
         [Test]

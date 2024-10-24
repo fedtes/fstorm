@@ -48,7 +48,7 @@ namespace FStorm
                 throw new ArgumentNullException("Either connection or transaction are null. Cannot execute query.");
             }
             CreateContext();
-            return this.executor.Execute(this.connection, this.context);
+            return this.executor.Execute(this.connection, this.transaction, this.context);
         }
 
         public async Task<string> ToODataString() 

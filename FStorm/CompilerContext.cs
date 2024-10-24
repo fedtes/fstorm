@@ -72,6 +72,7 @@ namespace FStorm
 
         internal EdmEntityType? GetOutputType() => resourceEdmType;
         internal void SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
+        internal IQueryBuilder GetQuery() => ActiveQuery;
 
         internal List<Variable> GetVariablesInScope() {
             return scope.Where(x => x.ScopeType == CompilerScope.VARIABLE)
@@ -93,6 +94,9 @@ namespace FStorm
                 throw new ArgumentException($"Subcontext with name {name} not found", nameof(name));
         }
 
+        internal bool HasSubContext() => subcontextes.Any();
+
+        internal IDictionary<string, CompilerContext> GetSubContextes() => subcontextes; 
 #region "scope manipulation"
 
         /// <summary>

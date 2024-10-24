@@ -68,5 +68,15 @@ namespace FStorm
             return ((EdmStructuralProperty)constraint.DependentProperty, (EdmStructuralProperty)constraint.PrincipalProperty);
         }
 
+        public static Rows ToRows(this IEnumerable<Dictionary<string, object?>> l) 
+        {
+            var r = new Rows();
+            foreach (var item in l)
+            {
+                r.Add(item);
+            }
+            return r;
+        }        
+
     }
 }

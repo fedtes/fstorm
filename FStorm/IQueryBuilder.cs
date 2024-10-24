@@ -23,6 +23,7 @@ public interface IQueryBuilder
     IQueryBuilder WhereNull(string v);
     IQueryBuilder WhereNotNull(string v);
     IQueryBuilder Include(string relationName, IQueryBuilder query, string foreignKey, string localKey, bool isMany = false);
+    IQueryBuilder WhereIn(string v, object?[] objects);
 }
 
 

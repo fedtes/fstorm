@@ -18,7 +18,7 @@ namespace FStorm
             services.AddTransient<Writer>();
             services.AddSingleton<SemanticVisitor>();
             services.AddTransient<IQueryBuilder, DelegatedQueryBuilder>();
-            services.AddTransient<IQueryExecutor, DelegateQueryExecutor>();
+            services.AddTransient<IQueryExecutor, LocalQueryExecutor>();
         }
     }
 
