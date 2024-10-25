@@ -108,11 +108,18 @@ namespace FStorm
                     .Compile();
 
                 var r = await InnerExecute(connection, transaction, sc.Value, cq);
+                var r1 = r.Where(x => x[foreignKey] != null);
+                result = result
+                    .GroupJoin(r1, y => y[foreignKey], x => x[foreignKey], (y,x) => 
+                    { 
+                        y.Add(sc.Key, sc.Value.GetOutputKind() == OutputKind.Collection ? x.ToList() : x.FirstOrDefault()); 
+                        return y;
+                    }).ToRows();
 
-                result = r.GroupBy(x => x[foreignKey])
-                    .Where(x => x.Key != null)
-                    .Join(result, x => x.Key, y => y[foreignKey], (x,y) => { y.Add(sc.Key, sc.Value.GetOutputKind() == OutputKind.Collection ? x.ToList() : x.FirstOrDefault()); return y;})
-                    .ToRows();
+                // result = r.GroupBy(x => x[foreignKey])
+                //     .Where(x => x.Key != null)
+                //     .Join(result, x => x.Key, y => y[foreignKey], )
+                //     .ToRows();
             }
 
             return result;

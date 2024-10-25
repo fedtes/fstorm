@@ -161,7 +161,7 @@ public class SemanticVisitor
 #region "Visit Select Expand"
     protected void VisitExpandedItems(CompilerContext context, ExpandedNavigationSelectItem i) {
         CompilerContext expansionContext = new CompilerContext(service, i.PathToNavigationProperty, i.FilterOption, i.SelectAndExpand,i.OrderByOption, new PaginationClause(i.TopOption,i.SkipOption));
-        expansionContext.SetOutputPath(context.GetOutputPath()! + i.NavigationSource.Name);
+        expansionContext.SetOutputPath(context.GetOutputPath()! + i.PathToNavigationProperty.FirstSegment.Identifier);
         VisitContext(expansionContext);
         var _firstSegment = (NavigationPropertySegment)i.PathToNavigationProperty.FirstSegment;
         context.Include((EdmNavigationProperty)_firstSegment.NavigationProperty,expansionContext);
