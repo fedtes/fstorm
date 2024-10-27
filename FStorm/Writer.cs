@@ -37,7 +37,7 @@ namespace FStorm
         }
 
 
-        public void WriteResult(CompilerContext context ,IEnumerable<IDictionary<string, object?>> data, Stream stream)
+        public void WriteResult(ICompilerContext context ,IEnumerable<IDictionary<string, object?>> data, Stream stream)
         {
             Message message = new Message(stream);
             ODataMessageWriterSettings settings = new ODataMessageWriterSettings();

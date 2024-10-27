@@ -4,96 +4,96 @@ using SqlKata.Execution;
 
 namespace FStorm
 {
-    public class DelegateQueryExecutor : IQueryExecutor
-    {
-        public async Task<IEnumerable<IDictionary<string, object?>>> Execute(Connection connection,Transaction transaction, CompilerContext context)
-        {
-            DelegatedSQLCompiledQuery compiledQuery = (DelegatedSQLCompiledQuery)context.Compile();
-            var QueryFactory = new QueryFactory(connection.DBConnection, compiledQuery.Compiler, connection.GetCommandTimeout());
-            var xquery = ConvertQuery(QueryFactory, compiledQuery.Query);
-            return (await xquery.GetAsync(connection.transaction!.transaction))
-                .Cast<IDictionary<string, object>>()
-                .Select(x => CleanOutput(context, x)).ToList();
-        }
+    // public class DelegateQueryExecutor : IQueryExecutor
+    // {
+    //     public async Task<IEnumerable<IDictionary<string, object?>>> Execute(Connection connection,Transaction transaction, CompilerContext context)
+    //     {
+    //         DelegatedSQLCompiledQuery compiledQuery = (DelegatedSQLCompiledQuery)context.Compile();
+    //         var QueryFactory = new QueryFactory(connection.DBConnection, compiledQuery.Compiler, connection.GetCommandTimeout());
+    //         var xquery = ConvertQuery(QueryFactory, compiledQuery.Query);
+    //         return (await xquery.GetAsync(connection.transaction!.transaction))
+    //             .Cast<IDictionary<string, object>>()
+    //             .Select(x => CleanOutput(context, x)).ToList();
+    //     }
 
-        private Query ConvertQuery(QueryFactory factory, Query query)
-        {
-            var subQueries = query.Includes.ToList();
-            query.Includes.Clear();
-            var xquery = factory.FromQuery(query);
-             foreach (var subquery in subQueries)
-            {
-                xquery.Include(subquery.Name, ConvertQuery(factory, subquery.Query), subquery.ForeignKey, subquery.LocalKey,subquery.IsMany);
-            }
-            return xquery;
-        }
-
-
-        /// <summary>
-        /// Remove "junk" info added during the builder. These info are not used here so they are removed. 
-        /// In other contexts these info are used to recover some metadata.
-        /// </summary>
-        private IDictionary<string, object?> CleanOutput(CompilerContext context, IDictionary<string, object> x)
-        {
-            if (x.Keys.Any(y => y.EndsWith("/:key")))
-            {
-                x.Remove(x.Keys.First(y => y.EndsWith("/:key")));
-            }
-
-            if (x.Keys.Any(y => y.EndsWith("/:fkey")))
-            {
-                var y = x.Keys.Where(y => y.EndsWith("/:fkey")).ToList();
-                y.ForEach(z => x.Remove(z));
-            }
-
-            return x.ToDictionary(y => y.Key.Substring(y.Key.LastIndexOf("/") + 1), ValueSelector);
-
-            object? ValueSelector(KeyValuePair<string,object> y)
-            {
-                if (y.Value is Dictionary<string, object> d) 
-                {
-                    var subContext = context.GetSubContext(y.Key);
-                    return CleanOutput(subContext, d);
-                }
-                else if (y.Value is IEnumerable<Dictionary<string, object>> i) 
-                {
-                    var subContext = context.GetSubContext(y.Key);
-                    return i.Select(e => CleanOutput(subContext, e)).ToList();
-                } 
-                else 
-                {
-                    return EnsureType(context, y.Key, y.Value);
-                }
-            }
-        }
+    //     private Query ConvertQuery(QueryFactory factory, Query query)
+    //     {
+    //         var subQueries = query.Includes.ToList();
+    //         query.Includes.Clear();
+    //         var xquery = factory.FromQuery(query);
+    //          foreach (var subquery in subQueries)
+    //         {
+    //             xquery.Include(subquery.Name, ConvertQuery(factory, subquery.Query), subquery.ForeignKey, subquery.LocalKey,subquery.IsMany);
+    //         }
+    //         return xquery;
+    //     }
 
 
-        object? EnsureType(CompilerContext context, string s,object o)
-        {
-            if (context.GetOutputKind() == OutputKind.RawValue)
-                return o;
-            var s1 = s.Split("/");
-            EdmPath p = context.Aliases.TryGet(s1[0])!;
-            return Helpers.TypeConverter(o, (p + s1[1]).GetTypeKind());
-        }
-    }
+    //     /// <summary>
+    //     /// Remove "junk" info added during the builder. These info are not used here so they are removed. 
+    //     /// In other contexts these info are used to recover some metadata.
+    //     /// </summary>
+    //     private IDictionary<string, object?> CleanOutput(CompilerContext context, IDictionary<string, object> x)
+    //     {
+    //         if (x.Keys.Any(y => y.EndsWith("/:key")))
+    //         {
+    //             x.Remove(x.Keys.First(y => y.EndsWith("/:key")));
+    //         }
 
-    public class LocalQueryExecutor : IQueryExecutor
+    //         if (x.Keys.Any(y => y.EndsWith("/:fkey")))
+    //         {
+    //             var y = x.Keys.Where(y => y.EndsWith("/:fkey")).ToList();
+    //             y.ForEach(z => x.Remove(z));
+    //         }
+
+    //         return x.ToDictionary(y => y.Key.Substring(y.Key.LastIndexOf("/") + 1), ValueSelector);
+
+    //         object? ValueSelector(KeyValuePair<string,object> y)
+    //         {
+    //             if (y.Value is Dictionary<string, object> d) 
+    //             {
+    //                 var subContext = context.GetSubContext(y.Key);
+    //                 return CleanOutput(subContext, d);
+    //             }
+    //             else if (y.Value is IEnumerable<Dictionary<string, object>> i) 
+    //             {
+    //                 var subContext = context.GetSubContext(y.Key);
+    //                 return i.Select(e => CleanOutput(subContext, e)).ToList();
+    //             } 
+    //             else 
+    //             {
+    //                 return EnsureType(context, y.Key, y.Value);
+    //             }
+    //         }
+    //     }
+
+
+    //     object? EnsureType(CompilerContext context, string s,object o)
+    //     {
+    //         if (context.GetOutputKind() == OutputKind.RawValue)
+    //             return o;
+    //         var s1 = s.Split("/");
+    //         EdmPath p = context.Aliases.TryGet(s1[0])!;
+    //         return Helpers.TypeConverter(o, (p + s1[1]).GetTypeKind());
+    //     }
+    // }
+
+    public class DBCommandQueryExecutor : IQueryExecutor
     {
         private readonly FStormService service;
 
-        public LocalQueryExecutor(FStormService service)
+        public DBCommandQueryExecutor(FStormService service)
         {
             this.service = service;
         }
 
-        public async Task<IEnumerable<IDictionary<string, object?>>> Execute(Connection connection, Transaction transaction, CompilerContext context)
+        public async Task<IEnumerable<IDictionary<string, object?>>> Execute(Connection connection, Transaction transaction, ICompilerContext context)
         {
-            DelegatedSQLCompiledQuery compiledQuery = (DelegatedSQLCompiledQuery)context.GetQuery().Compile();
+            var compiledQuery = context.GetQuery().Compile();
             return (await InnerExecute(connection, transaction, context, compiledQuery)).Select(x=> CleanOutput(context, x)).ToList();
         }
 
-        public async Task<Rows> InnerExecute(Connection connection, Transaction transaction, CompilerContext context, DelegatedSQLCompiledQuery compiledQuery)
+        public async Task<Rows> InnerExecute(Connection connection, Transaction transaction, ICompilerContext context, SQLCompiledQuery compiledQuery)
         {
             var result = await LocalExecute(connection, transaction, context, compiledQuery);
             if (!result.Any()) return result;
@@ -102,30 +102,35 @@ namespace FStorm
             foreach (var sc in context.GetSubContextes())
             {
                 var q = service.serviceProvider.GetService<IQueryBuilder>()!;
+                
                 var foreignKey = sc.Key+"/:fkey";
-                DelegatedSQLCompiledQuery cq = (DelegatedSQLCompiledQuery)q.From(sc.Value.GetQuery(), "E")
+                SQLCompiledQuery cq = q.From(sc.Value.GetQuery(), "E")
                     .WhereIn(foreignKey, result.Select(x => x[foreignKey]).ToArray())
                     .Compile();
 
                 var r = await InnerExecute(connection, transaction, sc.Value, cq);
-                var r1 = r.Where(x => x[foreignKey] != null);
                 result = result
-                    .GroupJoin(r1, y => y[foreignKey], x => x[foreignKey], (y,x) => 
-                    { 
-                        y.Add(sc.Key, sc.Value.GetOutputKind() == OutputKind.Collection ? x.ToList() : x.FirstOrDefault()); 
-                        return y;
-                    }).ToRows();
-
-                // result = r.GroupBy(x => x[foreignKey])
-                //     .Where(x => x.Key != null)
-                //     .Join(result, x => x.Key, y => y[foreignKey], )
-                //     .ToRows();
+                    .GroupJoin(r, y => y[foreignKey], x => x[foreignKey], (y,x) => ResultSelector(sc, y, x)).ToRows();
             }
 
             return result;
         }
 
-        public async Task<Rows> LocalExecute(Connection connection, Transaction transaction, CompilerContext context, DelegatedSQLCompiledQuery compiledQuery)
+        private Dictionary<string, object?> ResultSelector(KeyValuePair<string,ICompilerContext> sc, Dictionary<string, object?> y, IEnumerable<Dictionary<string, object?>> x) 
+        {
+            var expContext = (ExpansionCompilerContext)sc.Value;
+            if (sc.Value.GetOutputKind() == OutputKind.Collection)
+            {
+                y.Add(sc.Key, x.Skip(expContext.Skip).Take(expContext.Top).ToList());
+            }
+            else 
+            {
+                y.Add(sc.Key, x.FirstOrDefault());
+            }
+            return y;
+        }
+
+        public async Task<Rows> LocalExecute(Connection connection, Transaction transaction, ICompilerContext context, SQLCompiledQuery compiledQuery)
         {
             System.Data.Common.DbCommand command = connection.DBConnection.CreateCommand();
             command.Transaction = transaction.transaction;
@@ -178,7 +183,7 @@ namespace FStorm
             }
         }
 
-        object? EnsureType(CompilerContext context, string s, object o)
+        object? EnsureType(ICompilerContext context, string s, object o)
         {
             if (context.GetOutputKind() == OutputKind.RawValue)
                 return o;
@@ -188,11 +193,11 @@ namespace FStorm
         }
 
 
-                /// <summary>
+        /// <summary>
         /// Remove "junk" info added during the builder. These info are not used here so they are removed. 
         /// In other contexts these info are used to recover some metadata.
         /// </summary>
-        private IDictionary<string, object?> CleanOutput(CompilerContext context, IDictionary<string, object?> x)
+        private IDictionary<string, object?> CleanOutput(ICompilerContext context, IDictionary<string, object?> x)
         {
             if (x.Keys.Any(y => y.EndsWith("/:key")))
             {

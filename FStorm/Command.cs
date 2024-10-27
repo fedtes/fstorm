@@ -13,17 +13,19 @@ namespace FStorm
         protected readonly SemanticVisitor visitor;
         private readonly IQueryExecutor executor;
         private readonly Writer writer;
-        private CompilerContext context = null!;
+        private readonly CompilerContextFactory contextFactory;
+        private ICompilerContext context = null!;
 
         internal GetRequest Configuration { get; set; } = null!;
 
-        public Command(FStormService fStormService, SemanticVisitor visitor, IQueryExecutor executor, Writer writer) 
+        public Command(FStormService fStormService, SemanticVisitor visitor, IQueryExecutor executor, Writer writer, CompilerContextFactory contextFactory) 
         {
             CommandId = Guid.NewGuid().ToString();
             this.fsService = fStormService;
             this.visitor = visitor;
             this.executor = executor;
             this.writer = writer;
+            this.contextFactory = contextFactory;
         }
 
         public SQLCompiledQuery ToSQL()
@@ -35,11 +37,11 @@ namespace FStorm
         private void CreateContext()
         {
             ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.RequestPath, UriKind.Relative));
-            context = new CompilerContext(fsService, parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand(), parser.ParseOrderBy(), new PaginationClause(parser.ParseTop(), parser.ParseSkip()));
+            context = contextFactory.CreateContext(fsService, parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand(), parser.ParseOrderBy(), new PaginationClause(parser.ParseTop(), parser.ParseSkip()));
             visitor.VisitContext(context);
         }
 
-        protected virtual SQLCompiledQuery Compile(CompilerContext context) =>  context.Compile();
+        protected virtual SQLCompiledQuery Compile(ICompilerContext context) =>  context.Compile();
 
         public Task<IEnumerable<IDictionary<string, object?>>> ToListAsync()
         {

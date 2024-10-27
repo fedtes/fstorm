@@ -15,10 +15,10 @@ public class SemanticVisitor
     }
 
     /// <summary>
-    /// Visit all nodes of the clauses requested in the odata request, process it, and save the result into <see cref="CompilerContext"/>.
+    /// Visit all nodes of the clauses requested in the odata request, process it, and save the result into <see cref="ICompilerContext"/>.
     /// </summary>
     /// <param name="context"></param>
-    public void VisitContext(CompilerContext context)
+    public void VisitContext(ICompilerContext context)
     {
         EdmPath? current = context.GetOutputPath();
         current = this.VisitPath(context, context.GetOdataRequestPath(), current);
@@ -50,7 +50,7 @@ public class SemanticVisitor
     }
 
 #region "Visit Path"
-    protected EdmPath VisitPath(CompilerContext context, ODataPath oDataPath, EdmPath? input) 
+    protected EdmPath VisitPath(ICompilerContext context, ODataPath oDataPath, EdmPath? input) 
     {
         EdmPath current = input ?? pathFactory.CreatePath();
         for (int i = 0; i < oDataPath.Count; i++)
@@ -83,7 +83,7 @@ public class SemanticVisitor
         return current;
     }
 
-    protected EdmPath VisitEntitySetSegment(CompilerContext context, EntitySetSegment entitySetSegment) 
+    protected EdmPath VisitEntitySetSegment(ICompilerContext context, EntitySetSegment entitySetSegment) 
     {
         EdmPath alias = context.AddFrom((EdmEntityType)entitySetSegment.EdmType.AsElementType(), pathFactory.ParseString(EdmPath.PATH_ROOT + "/" + entitySetSegment.Identifier));
         //context.SetOutputKind(OutputKind.Collection);
@@ -92,7 +92,7 @@ public class SemanticVisitor
         return alias;
     }
 
-    protected EdmPath VisitNavigationPropertySegment(CompilerContext context, NavigationPropertySegment navigationPropertySegment, EdmPath currentPath) 
+    protected EdmPath VisitNavigationPropertySegment(ICompilerContext context, NavigationPropertySegment navigationPropertySegment, EdmPath currentPath) 
     {
         if (!context.HasFrom())
         {
@@ -109,7 +109,7 @@ public class SemanticVisitor
         }
     }
 
-    protected EdmPath VisitKeySegment(CompilerContext context, KeySegment keySegment, EdmPath currentPath) 
+    protected EdmPath VisitKeySegment(ICompilerContext context, KeySegment keySegment, EdmPath currentPath) 
     {
         var k = (keySegment.NavigationSource.Type.AsElementType() as EdmEntityType)!.GetEntityKey();
         BinaryFilter filter = new BinaryFilter() {
@@ -125,14 +125,14 @@ public class SemanticVisitor
         return currentPath;
     }
 
-    protected EdmPath VisitPropertySegment(CompilerContext context, PropertySegment propertySegment, EdmPath currentPath) 
+    protected EdmPath VisitPropertySegment(ICompilerContext context, PropertySegment propertySegment, EdmPath currentPath) 
     {
         context.AddSelect(currentPath , (EdmStructuralProperty)propertySegment.Property);
         //context.SetOutputKind(OutputKind.Property);
         return currentPath;
     }
 
-    protected EdmPath VisitCountSegment(CompilerContext context, CountSegment countSegment, EdmPath currentPath) 
+    protected EdmPath VisitCountSegment(ICompilerContext context, CountSegment countSegment, EdmPath currentPath) 
     {
         var k =currentPath.AsEdmElements().Last().Item2.GetEntityType().GetEntityKey();
         context.AddCount(currentPath, k);
@@ -140,7 +140,7 @@ public class SemanticVisitor
         return currentPath;
     }
 
-    protected EdmPath VisitFilterSegment(CompilerContext context, FilterSegment filterSegment, EdmPath currentPath)
+    protected EdmPath VisitFilterSegment(ICompilerContext context, FilterSegment filterSegment, EdmPath currentPath)
     {
         
         context.WrapQuery(currentPath);
@@ -159,15 +159,14 @@ public class SemanticVisitor
 #endregion
 
 #region "Visit Select Expand"
-    protected void VisitExpandedItems(CompilerContext context, ExpandedNavigationSelectItem i) {
-        CompilerContext expansionContext = new CompilerContext(service, i.PathToNavigationProperty, i.FilterOption, i.SelectAndExpand,i.OrderByOption, new PaginationClause(i.TopOption,i.SkipOption));
-        expansionContext.SetOutputPath(context.GetOutputPath()! + i.PathToNavigationProperty.FirstSegment.Identifier);
+    protected void VisitExpandedItems(ICompilerContext context, ExpandedNavigationSelectItem i) {
+        
+        ICompilerContext expansionContext = context.OpenExpansionScope(i);
         VisitContext(expansionContext);
-        var _firstSegment = (NavigationPropertySegment)i.PathToNavigationProperty.FirstSegment;
-        context.Include((EdmNavigationProperty)_firstSegment.NavigationProperty,expansionContext);
+        context.CloseExpansionScope(expansionContext, i);
     }
 
-    protected bool VisitSelectAndExpand(CompilerContext context, SelectExpandClause selectExpandClause)
+    protected bool VisitSelectAndExpand(ICompilerContext context, SelectExpandClause selectExpandClause)
     {
         if (selectExpandClause != null )
         {
@@ -205,7 +204,7 @@ public class SemanticVisitor
 #endregion
 
 #region "Visit Filter"
-    protected void VisitFilterClause(CompilerContext context, FilterClause filterClause){
+    protected void VisitFilterClause(ICompilerContext context, FilterClause filterClause){
         if (filterClause != null) {
             var _it = new Variable() 
             {
@@ -219,7 +218,7 @@ public class SemanticVisitor
         }
     }
 
-    protected ExpressionValue VisitExpression(CompilerContext context, SingleValueNode singleValueNode, RangeVariable? variable = null) 
+    protected ExpressionValue VisitExpression(ICompilerContext context, SingleValueNode singleValueNode, RangeVariable? variable = null) 
     {
         switch (singleValueNode)
         {
@@ -250,7 +249,7 @@ public class SemanticVisitor
         }
     }
 
-    protected ExpressionValue VisitNotNode(CompilerContext context, UnaryOperatorNode node)
+    protected ExpressionValue VisitNotNode(ICompilerContext context, UnaryOperatorNode node)
     {
         if (node.OperatorKind == UnaryOperatorKind.Not) {
             context.OpenNotScope();
@@ -263,7 +262,7 @@ public class SemanticVisitor
         return new ExpressionValue();
     }
 
-    protected ExpressionValue VisitBinaryOperator(CompilerContext context, BinaryOperatorNode node)
+    protected ExpressionValue VisitBinaryOperator(ICompilerContext context, BinaryOperatorNode node)
     {
         if (node.OperatorKind == BinaryOperatorKind.And) 
         {
@@ -291,7 +290,7 @@ public class SemanticVisitor
         return new ExpressionValue();
     }
 
-    protected ExpressionValue VisitSingleValuePropertyAccessNode(CompilerContext context, SingleValuePropertyAccessNode node) {
+    protected ExpressionValue VisitSingleValuePropertyAccessNode(ICompilerContext context, SingleValuePropertyAccessNode node) {
         var v = VisitExpression(context, node.Source);
         if (v is PathValue pathValue) {
             return new PropertyReference() {
@@ -305,7 +304,7 @@ public class SemanticVisitor
         
     }
 
-    protected ExpressionValue VisitSingleNavigationNode(CompilerContext context, SingleNavigationNode node)
+    protected ExpressionValue VisitSingleNavigationNode(ICompilerContext context, SingleNavigationNode node)
     {
         if (node.NavigationSource is IEdmContainedEntitySet)
         {
@@ -331,11 +330,11 @@ public class SemanticVisitor
         throw new InvalidOperationException("Unexpected NavigationSource type.");
     }
 
-    protected ExpressionValue VisitConstantNode(CompilerContext context, ConstantNode node) {
+    protected ExpressionValue VisitConstantNode(ICompilerContext context, ConstantNode node) {
         return new ConstantValue() { Value = node.Value} ;
     }
 
-    protected ExpressionValue VisitAnyNode(CompilerContext context, AnyNode node)
+    protected ExpressionValue VisitAnyNode(ICompilerContext context, AnyNode node)
     {
         Variable v = new Variable() {
             Name = node.CurrentRangeVariable.Name,
@@ -350,7 +349,7 @@ public class SemanticVisitor
         return new ExpressionValue();
     }
 
-    protected ExpressionValue VisitAllNode(CompilerContext context, AllNode node)
+    protected ExpressionValue VisitAllNode(ICompilerContext context, AllNode node)
     {
         Variable v = new Variable() {
             Name = node.CurrentRangeVariable.Name,
@@ -367,12 +366,12 @@ public class SemanticVisitor
         return new ExpressionValue();
     }
 
-    protected ExpressionValue VisitResourceRangeVariableReferenceNode(CompilerContext context, ResourceRangeVariableReferenceNode node)
+    protected ExpressionValue VisitResourceRangeVariableReferenceNode(ICompilerContext context, ResourceRangeVariableReferenceNode node)
     {
         return context.GetVariablesInScope().First(x => x.Name == node.Name);
     }
 
-    protected ExpressionValue VisitSingleValueFunctionCallNode(CompilerContext context, SingleValueFunctionCallNode node) {
+    protected ExpressionValue VisitSingleValueFunctionCallNode(ICompilerContext context, SingleValueFunctionCallNode node) {
         switch (node.Name.ToLowerInvariant())
         {
             case "contains":
@@ -402,30 +401,30 @@ public class SemanticVisitor
         return new ExpressionValue();
     }
 
-    // protected void VisitConvertNode(CompilerContext context, ConvertNode node) {
+    // protected void VisitConvertNode(ICompilerContext context, ConvertNode node) {
     //     throw new NotImplementedException();
     // }
-    protected void VisitLambdaNode(CompilerContext context, LambdaNode node) {
+    protected void VisitLambdaNode(ICompilerContext context, LambdaNode node) {
         throw new NotImplementedException();
     }
-    protected void VisitParameterAliasNode(CompilerContext context, ParameterAliasNode node) {
+    protected void VisitParameterAliasNode(ICompilerContext context, ParameterAliasNode node) {
         throw new NotImplementedException();
     }
-    protected void VisitSearchTermNode(CompilerContext context, SearchTermNode node) {
+    protected void VisitSearchTermNode(ICompilerContext context, SearchTermNode node) {
         throw new NotImplementedException();
     }
-    protected void VisitSingleEntityNode(CompilerContext context, SingleEntityNode node) {
+    protected void VisitSingleEntityNode(ICompilerContext context, SingleEntityNode node) {
         throw new NotImplementedException();
     }
-    protected void VisitSingleValueCastNode(CompilerContext context, SingleValueCastNode node) {
+    protected void VisitSingleValueCastNode(ICompilerContext context, SingleValueCastNode node) {
         throw new NotImplementedException();
     }
     
-    protected void VisitSingleValueOpenPropertyAccessNode(CompilerContext context, SingleValueOpenPropertyAccessNode node) {
+    protected void VisitSingleValueOpenPropertyAccessNode(ICompilerContext context, SingleValueOpenPropertyAccessNode node) {
         throw new NotImplementedException();
     }
 
-    protected void VisitUnaryOperatorNode(CompilerContext context, UnaryOperatorNode node) {
+    protected void VisitUnaryOperatorNode(ICompilerContext context, UnaryOperatorNode node) {
         throw new NotImplementedException();
     }
 
@@ -433,7 +432,7 @@ public class SemanticVisitor
 
 #region "Visit OrderBy"
 
-    protected void VisitOrderByClause(CompilerContext context, OrderByClause orderByClause)
+    protected void VisitOrderByClause(ICompilerContext context, OrderByClause orderByClause)
     {
         if (orderByClause is null) return;
         var _it = new Variable() 
@@ -457,7 +456,7 @@ public class SemanticVisitor
 
 #region "Visit Pagination"
 
-    protected void VisitPagination(CompilerContext context, PaginationClause pagination)
+    protected void VisitPagination(ICompilerContext context, PaginationClause pagination)
     {
         if (pagination.Top != null)
         {
