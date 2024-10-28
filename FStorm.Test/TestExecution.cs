@@ -30,7 +30,7 @@ namespace FStorm.Test
             var services = new ServiceCollection();
             services.AddFStorm(
                 MockModel.PrepareModel(),
-                new FStormOptions()
+                new ODataOptions()
                 {
                     SQLCompilerType = SQLCompilerType.SQLLite,
                     ServiceRoot = "https://my.service/odata/"
@@ -43,10 +43,10 @@ namespace FStorm.Test
         public async Task It_Should_read_entity_collection()
         {
             
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _FStormService = serviceProvider.GetService<ODataService>()!;
             var con = _FStormService.OpenConnection(connection);
             
-            var r = (await con.Get(new GetRequest() { RequestPath = "Customers" }).ToListAsync()).ToArray();
+            var r = (await con.Get("Customers").ToListAsync()).ToArray();
             Assert.That(r.Count, Is.EqualTo(3));
             Assert.That(r[0]["RagSoc"], Is.EqualTo("ACME"));
             Assert.That(r[1]["RagSoc"], Is.EqualTo("ECorp"));
@@ -68,10 +68,10 @@ namespace FStorm.Test
         public async Task It_Should_execute_count(string req, string exp)
         {
             
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _FStormService = serviceProvider.GetService<ODataService>()!;
             var con = _FStormService.OpenConnection(connection);
             
-            var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
+            var r = (await con.Get(req).ToListAsync()).ToArray();
             Assert.That(r.First()["count"]?.ToString(), Is.EqualTo(exp));
         }
 
@@ -81,10 +81,10 @@ namespace FStorm.Test
         [TestCase("Orders?$select=Note&$top=10&$filter=startswith(Note,'Major')&$orderby=Number desc", 1, "Major Pharmaceuticals")]
         public async Task It_Should_execute_select(string req,int colCount, string exp)
         {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _FStormService = serviceProvider.GetService<ODataService>()!;
             var con = _FStormService.OpenConnection(connection);
             
-            var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
+            var r = (await con.Get(req).ToListAsync()).ToArray();
             Assert.That(r.First().Count, Is.EqualTo(colCount));
             Assert.That(r.First()?.First().Value?.ToString(), Is.EqualTo(exp));
         }
@@ -94,9 +94,9 @@ namespace FStorm.Test
         [TestCase("Customers(1)?$expand=Address")]
         public async Task It_Should_execute_expand(string req)
         {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _FStormService = serviceProvider.GetService<ODataService>()!;
             var con = _FStormService.OpenConnection(connection);
-            var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
+            var r = (await con.Get(req).ToListAsync()).ToArray();
             Assert.That(r[0]["RagSoc"], Is.EqualTo("ACME"));
             Assert.That((r[0]["Address"] as IDictionary<string,object?>)["Country"], Is.EqualTo("Indonesia"));
         }
@@ -108,11 +108,21 @@ namespace FStorm.Test
         [TestCase("Customers(1)?$expand=Orders($top=10;$expand=DeliveryAddress)", 10)]
         public async Task It_Should_execute_expand_2(string req, int cnt)
         {
-            var _FStormService = serviceProvider.GetService<FStormService>()!;
+            var _FStormService = serviceProvider.GetService<ODataService>()!;
             var con = _FStormService.OpenConnection(connection);
-            var r = (await con.Get(new GetRequest() { RequestPath = req }).ToListAsync()).ToArray();
+            var r = (await con.Get(req).ToListAsync()).ToArray();
             Assert.That(r[0]["RagSoc"], Is.EqualTo("ACME"));
             Assert.That((r[0]["Orders"] as IList).Count, Is.EqualTo(cnt));
+        }
+
+        [Test]
+        [TestCase("")]
+        public async Task It_should_write_and_read_nextlink(string req)
+        {
+            var _FStormService = serviceProvider.GetService<ODataService>()!;
+            var con = _FStormService.OpenConnection(connection);
+            var r = (await con.Get(req).ToODataString());
+            Assert.That(r, Does.Contain("@data.nextlink"));
         }
 
 
@@ -123,7 +133,7 @@ namespace FStorm.Test
         //     var _FStormService = serviceProvider.GetService<FStormService>()!;
         //     var con = _FStormService.OpenConnection(connection);
 
-        //     var r = await con.Get(new GetRequest() { RequestPath = "Customers(1)" }).ToListAsync_1();
+        //     var r = await con.Get("Customers(1)").ToListAsync_1();
         // Assert.That(sr.ToString(), Is.EqualTo("{\"@odata.context\":\"https://my.service/odata/$metadata#Customers\",\"value\":[{\"ID\":1,\"RagSoc\":\"ACME\",\"AddressID\":null},{\"ID\":2,\"RagSoc\":\"ECorp\",\"AddressID\":null},{\"ID\":3,\"RagSoc\":\"DreamSolutions\",\"AddressID\":null}]}"));
         //     var w = serviceProvider.GetService<Writer>()!;
         //     var sr = w.WriteResult(r);
@@ -136,7 +146,7 @@ namespace FStorm.Test
         //     var _FStormService = serviceProvider.GetService<FStormService>()!;
         //     var con = _FStormService.OpenConnection(connection);
 
-        //     var r = await con.Get(new GetRequest() { RequestPath = "Customers(1)/RagSoc" }).ToListAsync_1();
+        //     var r = await con.Get("Customers(1)/RagSoc").ToListAsync_1();
 
         //     var w = serviceProvider.GetService<Writer>()!;
         //     var sr = w.WriteResult(r);
@@ -150,7 +160,7 @@ namespace FStorm.Test
         //     var _FStormService = serviceProvider.GetService<FStormService>()!;
         //     var con = _FStormService.OpenConnection(connection);
 
-        //     var r = await con.Get(new GetRequest() { RequestPath = "Customers(1)/Orders/$count" }).ToListAsync_1();
+        //     var r = await con.Get("Customers(1)/Orders/$count").ToListAsync_1();
 
         //     var w = serviceProvider.GetService<Writer>()!;
         //     var sr = w.WriteResult(r);

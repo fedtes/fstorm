@@ -44,7 +44,7 @@ internal class Program
         builder.Services.AddFStorm(
             //MockModel.PrepareModel(), 
             edm,
-            new FStormOptions() 
+            new ODataOptions() 
             {
                 SQLCompilerType = SQLCompilerType.MSSQL, 
                 ServiceRoot = "http://localhost:5056/odata/v1/"
@@ -89,7 +89,7 @@ public static class Extensions
     {
 
         app.MapGet(basePath, (HttpContext context) => {
-            var _odata = context.RequestServices.GetService<FStormService>()!;
+            var _odata = context.RequestServices.GetService<ODataService>()!;
             using (var _stream = new MemoryStream())
             {   
                 _odata.GetServiceDocument(_stream);
@@ -100,18 +100,18 @@ public static class Extensions
         });
 
         app.MapGet(basePath + "/$metadata", (HttpContext context) => {
-            var _odata = context.RequestServices.GetService<FStormService>()!;
+            var _odata = context.RequestServices.GetService<ODataService>()!;
             return Results.Text(_odata.GetMetadataDocument(),"application/xml",System.Text.Encoding.Unicode);
         });
 
         app.MapGet(basePath + "/{*resourse}", async (HttpContext context) =>
         {
-            var _odata = context.RequestServices.GetService<FStormService>()!;
+            var _odata = context.RequestServices.GetService<ODataService>()!;
             using (var con = _odata.OpenConnection(connectionFactory(context.RequestServices)))
             {
                 using (var _stream = new MemoryStream())
                 {
-                    await con.Get(new GetRequest() {RequestPath = context.Request.Path + context.Request.QueryString.Value}).ToODataResponse(_stream);
+                    await con.Get(context.Request.Path + context.Request.QueryString.Value).ToODataResponse(_stream);
                     return Results.Text(_stream.ToArray(),"application/json");
                 }
             }

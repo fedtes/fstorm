@@ -7,21 +7,36 @@ namespace FStorm
     {
         public readonly string CommandId;
 
-        internal Connection? connection;
-        internal Transaction? transaction;
-        protected readonly FStormService fsService;
+        internal Connection connection = null!;
+        internal Transaction transaction = null!;
+        internal ICompilerContext context = null!;
+        protected readonly ODataService service;
         protected readonly SemanticVisitor visitor;
         private readonly IQueryExecutor executor;
         private readonly Writer writer;
         private readonly CompilerContextFactory contextFactory;
-        private ICompilerContext context = null!;
 
-        internal GetRequest Configuration { get; set; } = null!;
+        /// <summary>
+        /// Default command execution timeout
+        /// </summary>
+        internal uint CommandTimeout { get; set; } =  30;
 
-        public Command(FStormService fStormService, SemanticVisitor visitor, IQueryExecutor executor, Writer writer, CompilerContextFactory contextFactory) 
+        /// <summary>
+        /// Default $top value if not speficied in the request
+        /// </summary>
+        internal uint DefaultTopRequest {get; set;} = 100;
+
+        /// <summary>
+        /// If true ignore the <see cref="DefaultTopRequest"/> parameters. If $top is specified in the request then it is NOT ignored. 
+        /// </summary>
+        internal bool BypassDefaultTopRequest {get; set;} = false;
+
+        internal string UriRequest { get; set; } = null!;
+
+        public Command(ODataService fStormService, SemanticVisitor visitor, IQueryExecutor executor, Writer writer, CompilerContextFactory contextFactory) 
         {
             CommandId = Guid.NewGuid().ToString();
-            this.fsService = fStormService;
+            this.service = fStormService;
             this.visitor = visitor;
             this.executor = executor;
             this.writer = writer;
@@ -36,8 +51,8 @@ namespace FStorm
 
         private void CreateContext()
         {
-            ODataUriParser parser = new ODataUriParser(fsService.Model, fsService.ServiceRoot, new Uri(Configuration.RequestPath, UriKind.Relative));
-            context = contextFactory.CreateContext(fsService, parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand(), parser.ParseOrderBy(), new PaginationClause(parser.ParseTop(), parser.ParseSkip()));
+            ODataUriParser parser = new ODataUriParser(service.Model, service.ServiceRoot, new Uri(UriRequest, UriKind.Relative));
+            context = contextFactory.CreateContext(service, parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand(), parser.ParseOrderBy(), new PaginationClause(parser.ParseTop(), parser.ParseSkip()));
             visitor.VisitContext(context);
         }
 
@@ -50,7 +65,7 @@ namespace FStorm
                 throw new ArgumentNullException("Either connection or transaction are null. Cannot execute query.");
             }
             CreateContext();
-            return this.executor.Execute(this.connection, this.transaction, this.context);
+            return this.executor.Execute(this);
         }
 
         public async Task<string> ToODataString() 

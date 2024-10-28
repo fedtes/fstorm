@@ -8,9 +8,9 @@ namespace FStorm
 {
     public static class ServiceCollectionExtensions
     {
-        public static void AddFStorm(this IServiceCollection services, EdmModel model, FStormOptions options)
+        public static void AddFStorm(this IServiceCollection services, EdmModel model, ODataOptions options)
         {
-            services.AddSingleton(p => new FStormService(p, model, options));
+            services.AddSingleton(p => new ODataService(p, model, options));
             services.AddSingleton<EdmPathFactory>();
             services.AddTransient<Connection>();
             services.AddTransient<Transaction>();
@@ -30,24 +30,34 @@ namespace FStorm
     }
 
 
-    public class FStormOptions
+    public class ODataOptions
     {
         public SQLCompilerType SQLCompilerType { get; set; }
 
         public string ServiceRoot { get; set; }
 
-        public FStormOptions()
+        /// <summary>
+        /// Default command execution timeout
+        /// </summary>
+        public uint DefaultCommandTimeout { get; set; } =  30;
+
+        /// <summary>
+        /// Default $top value if not speficied in the request
+        /// </summary>
+        public uint DefaultTopRequest {get; set;} = 100;
+
+        public ODataOptions()
         {
             ServiceRoot = "http://localhost/";
         }
     }
 
-    public class FStormService
+    public class ODataService
     {
         internal IServiceProvider serviceProvider;
-        internal readonly FStormOptions options;
+        internal readonly ODataOptions options;
 
-        public FStormService(IServiceProvider serviceProvider, EdmModel model, FStormOptions options) {
+        public ODataService(IServiceProvider serviceProvider, EdmModel model, ODataOptions options) {
             this.serviceProvider = serviceProvider;
             Model = model;
             this.options = options;

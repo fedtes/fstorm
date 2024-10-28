@@ -44,7 +44,7 @@ namespace FStorm
         /// <param name="type"></param>
         /// <param name="service"></param>
         /// <returns></returns>
-        public static EdmEntityType EnsureType(this IEdmType type, FStormService service) {
+        public static EdmEntityType EnsureType(this IEdmType type, ODataService service) {
             if (type is Microsoft.OData.Edm.EdmEntityType odataType) {
                 return (EdmEntityType)service.Model.FindDeclaredType(odataType.FullName);
             } 

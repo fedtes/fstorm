@@ -6,7 +6,7 @@ namespace FStorm;
 public class ExpansionCompilerContext : CompilerContext, ICompilerContext
 {
     public ExpansionCompilerContext(
-        FStormService service,
+        ODataService service,
         ODataPath oDataPath,
         FilterClause filter,
         SelectExpandClause selectExpand,

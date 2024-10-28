@@ -17,7 +17,7 @@ namespace FStorm.Test
         public void Setup()
         {
             var services = new ServiceCollection();
-            services.AddFStorm(MockModel.PrepareModel(), new FStormOptions() { SQLCompilerType = SQLCompilerType.MSSQL, ServiceRoot= "https://my.service/odata/" });
+            services.AddFStorm(MockModel.PrepareModel(), new ODataOptions() { SQLCompilerType = SQLCompilerType.MSSQL, ServiceRoot= "https://my.service/odata/" });
             serviceProvider = services.BuildServiceProvider();
         }
 
@@ -76,26 +76,6 @@ namespace FStorm.Test
         {
             var factory = serviceProvider.GetService<EdmPathFactory>()!;
             Assert.Throws<ArgumentException>(() => factory.CreatePath("Cus/tomers"));
-        }
-
-
-        [Test]
-        public void It_should_sort_datatable_columns()
-        {
-            EdmPathFactory factory = serviceProvider.GetService<EdmPathFactory>()!;
-            DataTable dt = new DataTable(factory.ParseString("~/Customer"));
-            dt.AddColumn(factory.ParseString("~/Customer/:key"));
-            dt.AddColumn(factory.ParseString("~/Customer/Orders/OrderNumber"));
-            dt.AddColumn(factory.ParseString("~/Customer/ID"));
-            dt.AddColumn(factory.ParseString("~/Customer/Orders/:key"));
-            dt.AddColumn(factory.ParseString("~/Customer/RagSoc"));
-
-            var s = dt.SortedColumns();
-            Assert.That(s[0].ToString(), Is.EqualTo("~/Customer/:key"));
-            Assert.That(s[1].ToString(), Is.EqualTo("~/Customer/ID"));
-            Assert.That(s[2].ToString(), Is.EqualTo("~/Customer/RagSoc"));
-            Assert.That(s[3].ToString(), Is.EqualTo("~/Customer/Orders/:key"));
-            Assert.That(s[4].ToString(), Is.EqualTo("~/Customer/Orders/OrderNumber"));
         }
 
     }

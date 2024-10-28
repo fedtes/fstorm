@@ -7,9 +7,9 @@ namespace FStorm;
 public class SemanticVisitor
 {
     private readonly EdmPathFactory pathFactory;
-    private readonly FStormService service;
+    private readonly ODataService service;
 
-    public SemanticVisitor(EdmPathFactory pathFactory, FStormService service){
+    public SemanticVisitor(EdmPathFactory pathFactory, ODataService service){
         this.pathFactory = pathFactory;
         this.service = service;
     }

@@ -8,13 +8,14 @@ namespace FStorm
         private bool disposedValue;
         private bool isOpen = false;
         private readonly IServiceProvider serviceProvider;
-
+        private readonly ODataService service;
         internal DbConnection DBConnection = null!;
         internal Transaction? transaction;
 
-        public Connection(IServiceProvider serviceProvider)
+        public Connection(IServiceProvider serviceProvider, ODataService service)
         {
             this.serviceProvider = serviceProvider;
+            this.service = service;
         }
 
         public Transaction BeginTransaction()
@@ -97,18 +98,31 @@ namespace FStorm
             }
         }
 
-        public Command Get(GetRequest configuration)
+        /// <summary>
+        /// Create a new Command from the odata uri request passed as parameter. UriRequest is relative to the odata root uri and shoul not start with /
+        /// </summary>
+        /// <param name="uriRequest">the relative part of the odata request</param>
+        /// <returns></returns>
+        public Command Get(string uriRequest)
         {
-            var cmd = serviceProvider.GetService<Command>()!;
-            cmd.Configuration = configuration;
-            cmd.connection= this;
-            cmd.transaction= transaction ?? BeginTransaction();
-            return cmd;
+            return Get(uriRequest, null);
         }
 
-        internal int GetCommandTimeout()
+        /// <summary>
+        /// Create a new Command from the odata uri request passed as parameter. UriRequest is relative to the odata root uri and shoul not start with /
+        /// </summary>
+        /// <param name="uriRequest">the relative part of the odata request</param>
+        /// <returns></returns>
+        public Command Get(string uriRequest, CommandOptions? options)
         {
-            return 30;
+            var cmd = serviceProvider.GetService<Command>()!;
+            cmd.UriRequest = uriRequest;
+            cmd.connection= this;
+            cmd.transaction= transaction ?? BeginTransaction();
+            cmd.CommandTimeout = options?.CommandTimeout ?? this.service.options.DefaultCommandTimeout; 
+            cmd.DefaultTopRequest = options?.DefaultTopRequest ?? this.service.options.DefaultTopRequest; 
+            cmd.BypassDefaultTopRequest = options?.BypassDefaultTopRequest ?? false; 
+            return cmd;
         }
 
         protected virtual void Dispose(bool disposing)

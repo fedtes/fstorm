@@ -25,21 +25,21 @@ namespace FStorm
 
         public const string PATH_ROOT = "~";
         protected List<EdmSegment> _segments;
-        protected readonly FStormService fStormService;
+        protected readonly ODataService fStormService;
 #region "costructors"
-        internal EdmPath(FStormService fStormService)
+        internal EdmPath(ODataService fStormService)
         {
             this.fStormService = fStormService;
             _segments = new List<EdmSegment>();
         }
 
-        internal EdmPath(FStormService fStormService, params string[] segments)
+        internal EdmPath(ODataService fStormService, params string[] segments)
         {
             _segments = segments.Select(x => new EdmSegment(x)).ToList();
             this.fStormService = fStormService;
         }
 
-        internal EdmPath(FStormService fStormService, params EdmSegment[] segments)
+        internal EdmPath(ODataService fStormService, params EdmSegment[] segments)
         {
             this.fStormService = fStormService;
             _segments = segments.ToList();
@@ -232,9 +232,9 @@ namespace FStorm
     /// </summary>
     public class EdmPathFactory
     {
-        private readonly FStormService fStormService;
+        private readonly ODataService fStormService;
 
-        public EdmPathFactory(FStormService fStormService)
+        public EdmPathFactory(ODataService fStormService)
         {
             this.fStormService = fStormService;
         }

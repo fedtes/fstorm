@@ -21,7 +21,7 @@ namespace FStorm
         private OutputKind outputKind;
         private EdmPath? resourcePath = null;
         private EdmEntityType? resourceEdmType = null;
-        private readonly FStormService service;
+        private readonly ODataService service;
         private ODataPath oDataPath;
         private FilterClause filter;
         private SelectExpandClause selectExpand;
@@ -30,7 +30,7 @@ namespace FStorm
 
         private Dictionary<string, ICompilerContext> subcontextes = new Dictionary<string, ICompilerContext>();
 
-        public CompilerContext(FStormService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination)
+        public CompilerContext(ODataService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination)
         {
             this.service = service;
             this.oDataPath = oDataPath;

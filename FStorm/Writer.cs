@@ -29,9 +29,9 @@ namespace FStorm
 
     public class Writer
     {
-        private readonly FStormService service;
+        private readonly ODataService service;
 
-        public Writer(FStormService service) 
+        public Writer(ODataService service) 
         {
             this.service = service;
         }

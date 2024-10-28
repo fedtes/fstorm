@@ -6,14 +6,14 @@ namespace FStorm;
 public class SQLKataQueryBuilder : IQueryBuilder
 {
     private readonly Query _query;
-    private readonly FStormService service;
+    private readonly ODataService service;
 
-    public SQLKataQueryBuilder(FStormService service) {
+    public SQLKataQueryBuilder(ODataService service) {
         _query = new SqlKata.Query();
         this.service = service;
     }
 
-    public SQLKataQueryBuilder(FStormService service, SqlKata.Query query) {
+    public SQLKataQueryBuilder(ODataService service, SqlKata.Query query) {
         this.service = service;
         this._query = query;
     }
