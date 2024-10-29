@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Data.Sqlite;
 using System.Collections;
+using System.Text.RegularExpressions;
 
 namespace FStorm.Test
 {
@@ -116,13 +117,19 @@ namespace FStorm.Test
         }
 
         [Test]
-        [TestCase("")]
+        [TestCase("Orders?$filter=Total le 1000&$top=10")]
         public async Task It_should_write_and_read_nextlink(string req)
         {
             var _FStormService = serviceProvider.GetService<ODataService>()!;
             var con = _FStormService.OpenConnection(connection);
-            var r = (await con.Get(req).ToODataString());
-            Assert.That(r, Does.Contain("@data.nextlink"));
+            var s = (await con.Get(req).ToODataString());
+            var r = (await con.Get(req).ToListAsync());
+            Assert.That(s, Does.Contain("@odata.nextLink"));
+            Assert.AreEqual(10, r.Count());
+            var nextLink = new Regex("\"@odata.nextLink\":\"(?'nextlink'[^\"]+)\"").Match(s).Groups["nextlink"].Value;
+            var r1 = (await con.Get(nextLink).ToListAsync());
+            Assert.AreEqual(10, r1.Count());
+            Assert.That(r1.First()[""], Is.EqualTo(""));
         }
 
 

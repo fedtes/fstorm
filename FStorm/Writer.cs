@@ -1,6 +1,7 @@
 ﻿using Microsoft.OData.Edm;
 using Microsoft.OData;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace FStorm
 {
@@ -30,10 +31,13 @@ namespace FStorm
     public class Writer
     {
         private readonly ODataService service;
+        private readonly DeltaTokenService deltaTokenService;
+        private IEdmEntitySet entitySet;
 
-        public Writer(ODataService service) 
+        public Writer(ODataService service, DeltaTokenService deltaTokenService) 
         {
             this.service = service;
+            this.deltaTokenService = deltaTokenService;
         }
 
 
@@ -52,17 +56,17 @@ namespace FStorm
                 Top = context.GetPaginationClause().Top
             };
             ODataMessageWriter writer = new ODataMessageWriter(message, settings, service.Model);
-            IEdmEntitySet entitySet = service.Model.EntityContainer.EntitySets().
+            entitySet = service.Model.EntityContainer.EntitySets().
                 Where(x => x.EntityType == context.GetOutputType()).First();
 
             switch (context.GetOutputKind())
             {
                 case OutputKind.Collection:
-                    WriteCollection(writer.CreateODataResourceSetWriter(entitySet), data);
+                    WriteCollection(context, writer.CreateODataResourceSetWriter(entitySet), data);
                     break;
                 case OutputKind.Object:
                 case OutputKind.Property:
-                    WriteObject(writer.CreateODataResourceWriter(entitySet), data.First());
+                    WriteObject(context, writer.CreateODataResourceWriter(entitySet), data.First());
                     break;
                 case OutputKind.RawValue:
                     writer.WriteValue(data.First().First().Value);
@@ -76,18 +80,22 @@ namespace FStorm
             // return reader.ReadToEnd();
         }
 
-        protected void WriteCollection(ODataWriter odataWriter, IEnumerable<IDictionary<string, object?>> data) 
+        protected void WriteCollection(ICompilerContext context, ODataWriter odataWriter, IEnumerable<IDictionary<string, object?>> data, bool isExpand = false) 
         {
             ODataResourceSet set = new ODataResourceSet();
+            if (!isExpand) 
+            {
+                set.NextPageLink = new Uri(entitySet.Name + "?" + deltaTokenService.ComputeSkipToken(context), UriKind.Relative);
+            }
             odataWriter.WriteStart(set);
             foreach (var item in data)
             {
-                WriteObject(odataWriter, item);
+                WriteObject(context, odataWriter, item);
             }
             odataWriter.WriteEnd();
         }
 
-        protected void WriteObject(ODataWriter odataWriter, IDictionary<string, object?> record) 
+        protected void WriteObject(ICompilerContext context, ODataWriter odataWriter, IDictionary<string, object?> record) 
         {
             ODataResource entity = new ODataResource();
             List<ODataProperty> entityProperties = new List<ODataProperty>();
@@ -107,7 +115,7 @@ namespace FStorm
                     Name = prop.Key,
                     IsCollection = false
                 });
-                WriteObject(odataWriter, (IDictionary<string, object?>)prop.Value ?? new Dictionary<string,object?>());
+                WriteObject(context, odataWriter, (IDictionary<string, object?>)prop.Value ?? new Dictionary<string,object?>());
                 odataWriter.WriteEnd();
             }
 
@@ -118,7 +126,7 @@ namespace FStorm
                     Name = prop.Key,
                     IsCollection = true
                 });
-                WriteCollection(odataWriter, (IEnumerable<IDictionary<string, object?>>)prop.Value ?? Enumerable.Empty<IDictionary<string, object?>>());
+                WriteCollection(context, odataWriter, (IEnumerable<IDictionary<string, object?>>)prop.Value ?? Enumerable.Empty<IDictionary<string, object?>>());
                 odataWriter.WriteEnd();
             }
             odataWriter.WriteEnd();

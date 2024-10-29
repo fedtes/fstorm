@@ -15,6 +15,7 @@ namespace FStorm
         private readonly IQueryExecutor executor;
         private readonly Writer writer;
         private readonly CompilerContextFactory contextFactory;
+        private readonly DeltaTokenService deltaTokenService;
 
         /// <summary>
         /// Default command execution timeout
@@ -33,7 +34,7 @@ namespace FStorm
 
         internal string UriRequest { get; set; } = null!;
 
-        public Command(ODataService fStormService, SemanticVisitor visitor, IQueryExecutor executor, Writer writer, CompilerContextFactory contextFactory) 
+        public Command(ODataService fStormService, SemanticVisitor visitor, IQueryExecutor executor, Writer writer, CompilerContextFactory contextFactory, DeltaTokenService deltaTokenService) 
         {
             CommandId = Guid.NewGuid().ToString();
             this.service = fStormService;
@@ -41,6 +42,7 @@ namespace FStorm
             this.executor = executor;
             this.writer = writer;
             this.contextFactory = contextFactory;
+            this.deltaTokenService = deltaTokenService;
         }
 
         public SQLCompiledQuery ToSQL()
@@ -51,8 +53,12 @@ namespace FStorm
 
         private void CreateContext()
         {
-            ODataUriParser parser = new ODataUriParser(service.Model, service.ServiceRoot, new Uri(UriRequest, UriKind.Relative));
-            context = contextFactory.CreateContext(service, parser.ParsePath(), parser.ParseFilter(), parser.ParseSelectAndExpand(), parser.ParseOrderBy(), new PaginationClause(parser.ParseTop(), parser.ParseSkip()));
+            context = contextFactory.CreateContext(UriRequest);
+            if (!String.IsNullOrEmpty(context.GetSkipToken()))
+            {
+                var nextUriRequest = deltaTokenService.DecodeSkipToken(context);
+                context = contextFactory.CreateContext(nextUriRequest);
+            }
             visitor.VisitContext(context);
         }
 

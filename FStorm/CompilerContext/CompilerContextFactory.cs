@@ -5,9 +5,36 @@ namespace FStorm;
 
 public class CompilerContextFactory
 {
-    internal ICompilerContext CreateContext(ODataService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination) => 
-        new CompilerContext(service, oDataPath, filter, selectExpand,orderBy, pagination);
+    private readonly ODataService service;
 
-    internal ICompilerContext CreateExpansionContext(ODataService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination) =>
+    public CompilerContextFactory(ODataService service)
+    {
+        this.service = service;
+    }
+
+    internal ICompilerContext CreateContext(string UriRequest) 
+    {
+        ODataUriParser parser = new ODataUriParser(service.Model, service.ServiceRoot, new Uri(UriRequest, UriKind.Relative));
+        return CreateContext(
+            UriRequest,
+            parser.ParsePath(),
+            parser.ParseFilter(),
+            parser.ParseSelectAndExpand(),
+            parser.ParseOrderBy(),
+            new PaginationClause(parser.ParseTop(), parser.ParseSkip()),
+            parser.ParseSkipToken());
+    }
+
+    internal ICompilerContext CreateContext(
+        string UriRequest,
+        ODataPath oDataPath,
+        FilterClause filter,
+        SelectExpandClause selectExpand,
+        OrderByClause orderBy,
+        PaginationClause pagination,
+        string skipToken) => 
+        new CompilerContext(service, UriRequest, oDataPath, filter, selectExpand,orderBy, pagination, skipToken);
+
+    internal ICompilerContext CreateExpansionContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination) =>
         new ExpansionCompilerContext(service, oDataPath, filter, selectExpand,orderBy, pagination);
 }

@@ -11,7 +11,7 @@ public class ExpansionCompilerContext : CompilerContext, ICompilerContext
         FilterClause filter,
         SelectExpandClause selectExpand,
         OrderByClause orderBy,
-        PaginationClause pagination) : base(service, oDataPath, filter, selectExpand, orderBy, pagination)
+        PaginationClause pagination) : base(service,string.Empty, oDataPath, filter, selectExpand, orderBy, pagination, string.Empty)
     {    }
 
     internal int Skip {get; private set;} = 0;

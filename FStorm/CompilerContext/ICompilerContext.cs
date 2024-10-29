@@ -6,6 +6,7 @@ namespace FStorm;
 
 public interface ICompilerContext
 {
+    internal string UriRequest { get; }
     /// <summary>
     /// Keeps track of the aliases used in the query and the meaning they have.
     /// </summary>
@@ -20,6 +21,7 @@ public interface ICompilerContext
     internal SelectExpandClause GetSelectAndExpand();
     internal PaginationClause GetPaginationClause();
     internal OrderByClause GetOrderByClause();
+    internal string GetSkipToken();
     internal OutputKind GetOutputKind();
     internal EdmPath? GetOutputPath();
     internal void SetOutputKind(OutputKind OutputType);

@@ -20,6 +20,7 @@ namespace FStorm
             services.AddTransient<IQueryBuilder, SQLKataQueryBuilder>();
             services.AddTransient<IQueryExecutor, DBCommandQueryExecutor>();
             services.AddSingleton<CompilerContextFactory>();
+            services.AddSingleton<DeltaTokenService>();
         }
     }
 

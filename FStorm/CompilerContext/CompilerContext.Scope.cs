@@ -218,7 +218,7 @@ public partial class CompilerContext
     ICompilerContext ICompilerContext.OpenExpansionScope(ExpandedNavigationSelectItem i)
     {
         ICompilerContext expansionContext = service.serviceProvider.GetService<CompilerContextFactory>()!
-            .CreateExpansionContext(service, i.PathToNavigationProperty, i.FilterOption, i.SelectAndExpand, i.OrderByOption, new PaginationClause(i.TopOption, i.SkipOption));
+            .CreateExpansionContext(i.PathToNavigationProperty, i.FilterOption, i.SelectAndExpand, i.OrderByOption, new PaginationClause(i.TopOption, i.SkipOption));
         expansionContext.SetOutputPath(((ICompilerContext)this).GetOutputPath()! + i.PathToNavigationProperty.FirstSegment.Identifier);
         var s = new CompilerScope(CompilerScope.EXPAND, null);
         scope.Push(s);

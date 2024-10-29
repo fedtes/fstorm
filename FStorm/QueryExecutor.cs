@@ -23,9 +23,9 @@ namespace FStorm
         {
             var result = await LocalExecute(command, compiledQuery);
             if (!result.Any()) return result;
-            if (!command.context.HasSubContext()) return result;
+            if (!context.HasSubContext()) return result;
 
-            foreach (var sc in command.context.GetSubContextes())
+            foreach (var sc in context.GetSubContextes())
             {
                 var q = service.serviceProvider.GetService<IQueryBuilder>()!;
                 

@@ -18,6 +18,9 @@ namespace FStorm
         /// List of all aliases used in the From clause
         /// </summary>
         AliasStore ICompilerContext.Aliases { get => MainScope.Aliases; }
+        private string _UriRequest;
+        string ICompilerContext.UriRequest { get => _UriRequest; }
+
         private OutputKind outputKind;
         private EdmPath? resourcePath = null;
         private EdmEntityType? resourceEdmType = null;
@@ -27,17 +30,27 @@ namespace FStorm
         private SelectExpandClause selectExpand;
         private readonly OrderByClause orderBy;
         private readonly PaginationClause pagination;
+        private readonly string skipToken;
 
         private Dictionary<string, ICompilerContext> subcontextes = new Dictionary<string, ICompilerContext>();
 
-        public CompilerContext(ODataService service, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination)
+        public CompilerContext(ODataService service,
+                               string UriRequest,
+                               ODataPath oDataPath,
+                               FilterClause filter,
+                               SelectExpandClause selectExpand,
+                               OrderByClause orderBy,
+                               PaginationClause pagination,
+                               string skipToken)
         {
             this.service = service;
+            _UriRequest = UriRequest;
             this.oDataPath = oDataPath;
             this.filter = filter;
             this.selectExpand = selectExpand;
             this.orderBy = orderBy;
             this.pagination = pagination;
+            this.skipToken = skipToken;
             SetMainQuery(service.serviceProvider.GetService<IQueryBuilder>()!);
         }
 
@@ -52,6 +65,7 @@ namespace FStorm
         SelectExpandClause ICompilerContext.GetSelectAndExpand() => selectExpand;
         PaginationClause ICompilerContext.GetPaginationClause() => pagination;
         OrderByClause ICompilerContext.GetOrderByClause() => orderBy;
+        string ICompilerContext.GetSkipToken() => skipToken;
         OutputKind ICompilerContext.GetOutputKind() => outputKind;
         void ICompilerContext.SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
         EdmPath? ICompilerContext.GetOutputPath() => resourcePath;

@@ -149,10 +149,9 @@ public partial class CompilerContext
             var p = (EdmStructuralProperty)property;
             ((ICompilerContext)this).AddSelect(resourcePath, p, p.columnName);
         }
-
-        CompilerContext tmpctx = new CompilerContext(service, ((ICompilerContext)this).GetOdataRequestPath(), filter, selectExpand, orderBy, pagination);
-        var a = ((ICompilerContext)tmpctx).Aliases.AddOrGet(resourcePath);
-        SetMainQuery(tmpctx.ActiveQuery.From(this.ActiveQuery, a), ((ICompilerContext)tmpctx).Aliases);
+        ICompilerContext tmpctx = service.serviceProvider.GetService<CompilerContextFactory>()!.CreateContext(this._UriRequest, ((ICompilerContext)this).GetOdataRequestPath(), filter, selectExpand, orderBy, pagination, skipToken);
+        var a = tmpctx.Aliases.AddOrGet(resourcePath);
+        SetMainQuery(((CompilerContext)tmpctx).ActiveQuery.From(this.ActiveQuery, a), tmpctx.Aliases);
     }
 
     void ICompilerContext.AddLimit(long top)
