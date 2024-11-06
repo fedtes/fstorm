@@ -3,7 +3,7 @@ using System.IO;
 using FStorm;
 using FStorm.Test;
 using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.Data.SqlClient;
+//using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 
 //var odataService = new FStormService()
@@ -61,7 +61,7 @@ internal class Program
         //     app.UseSwaggerUI();
         // }
         //app.UseOdata("odata/v1", (s) => new SqliteConnection(app.Environment.IsDevelopment() ? "Data Source=.\\bin\\Debug\\net8.0\\MockData;" : ".\\MockData;"));
-        app.UseOdata("odata/v1", (s) => new SqlConnection("Server=10.10.0.9\\SQL2016;Database=test;user id=sa;Password=P4ssw0rd;Trusted_Connection=False;TrustServerCertificate=True"));
+        //app.UseOdata("odata/v1", (s) => new SqlConnection("Server=10.10.0.9\\SQL2016;Database=test;user id=sa;Password=P4ssw0rd;Trusted_Connection=False;TrustServerCertificate=True"));
 
         // app.MapGet("odata/v1/{*resourse}", async (HttpContext context) =>
         // {

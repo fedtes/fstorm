@@ -86,9 +86,6 @@ public class SemanticVisitor
     protected EdmPath VisitEntitySetSegment(ICompilerContext context, EntitySetSegment entitySetSegment) 
     {
         EdmPath alias = context.AddFrom((EdmEntityType)entitySetSegment.EdmType.AsElementType(), pathFactory.ParseString(EdmPath.PATH_ROOT + "/" + entitySetSegment.Identifier));
-        //context.SetOutputKind(OutputKind.Collection);
-        //context.SetOutputType((EdmEntityType)entitySetSegment.EdmType.AsElementType());
-        //context.SetOutputPath(alias);
         return alias;
     }
 
@@ -218,7 +215,7 @@ public class SemanticVisitor
         }
     }
 
-    protected ExpressionValue VisitExpression(ICompilerContext context, SingleValueNode singleValueNode, RangeVariable? variable = null) 
+    protected VisitResult VisitExpression(ICompilerContext context, SingleValueNode singleValueNode, RangeVariable? variable = null) 
     {
         switch (singleValueNode)
         {
@@ -249,7 +246,7 @@ public class SemanticVisitor
         }
     }
 
-    protected ExpressionValue VisitNotNode(ICompilerContext context, UnaryOperatorNode node)
+    protected VisitResult VisitNotNode(ICompilerContext context, UnaryOperatorNode node)
     {
         if (node.OperatorKind == UnaryOperatorKind.Not) {
             context.OpenNotScope();
@@ -259,10 +256,10 @@ public class SemanticVisitor
         else{
             throw new NotImplementedException();
         }
-        return new ExpressionValue();
+        return new VisitResult();
     }
 
-    protected ExpressionValue VisitBinaryOperator(ICompilerContext context, BinaryOperatorNode node)
+    protected VisitResult VisitBinaryOperator(ICompilerContext context, BinaryOperatorNode node)
     {
         if (node.OperatorKind == BinaryOperatorKind.And) 
         {
@@ -287,10 +284,10 @@ public class SemanticVisitor
             };
             context.AddFilter(filter);
         }
-        return new ExpressionValue();
+        return new VisitResult();
     }
 
-    protected ExpressionValue VisitSingleValuePropertyAccessNode(ICompilerContext context, SingleValuePropertyAccessNode node) {
+    protected VisitResult VisitSingleValuePropertyAccessNode(ICompilerContext context, SingleValuePropertyAccessNode node) {
         var v = VisitExpression(context, node.Source);
         if (v is PathValue pathValue) {
             return new PropertyReference() {
@@ -304,7 +301,7 @@ public class SemanticVisitor
         
     }
 
-    protected ExpressionValue VisitSingleNavigationNode(ICompilerContext context, SingleNavigationNode node)
+    protected VisitResult VisitSingleNavigationNode(ICompilerContext context, SingleNavigationNode node)
     {
         if (node.NavigationSource is IEdmContainedEntitySet)
         {
@@ -330,11 +327,11 @@ public class SemanticVisitor
         throw new InvalidOperationException("Unexpected NavigationSource type.");
     }
 
-    protected ExpressionValue VisitConstantNode(ICompilerContext context, ConstantNode node) {
+    protected VisitResult VisitConstantNode(ICompilerContext context, ConstantNode node) {
         return new ConstantValue() { Value = node.Value} ;
     }
 
-    protected ExpressionValue VisitAnyNode(ICompilerContext context, AnyNode node)
+    protected VisitResult VisitAnyNode(ICompilerContext context, AnyNode node)
     {
         Variable v = new Variable() {
             Name = node.CurrentRangeVariable.Name,
@@ -346,10 +343,10 @@ public class SemanticVisitor
         VisitExpression(context, node.Body);
         context.CloseAnyScope();
         context.CloseVariableScope();
-        return new ExpressionValue();
+        return new VisitResult();
     }
 
-    protected ExpressionValue VisitAllNode(ICompilerContext context, AllNode node)
+    protected VisitResult VisitAllNode(ICompilerContext context, AllNode node)
     {
         Variable v = new Variable() {
             Name = node.CurrentRangeVariable.Name,
@@ -363,15 +360,15 @@ public class SemanticVisitor
         context.CloseNotScope();
         context.CloseAllScope();
         context.CloseVariableScope();
-        return new ExpressionValue();
+        return new VisitResult();
     }
 
-    protected ExpressionValue VisitResourceRangeVariableReferenceNode(ICompilerContext context, ResourceRangeVariableReferenceNode node)
+    protected VisitResult VisitResourceRangeVariableReferenceNode(ICompilerContext context, ResourceRangeVariableReferenceNode node)
     {
         return context.GetVariablesInScope().First(x => x.Name == node.Name);
     }
 
-    protected ExpressionValue VisitSingleValueFunctionCallNode(ICompilerContext context, SingleValueFunctionCallNode node) {
+    protected VisitResult VisitSingleValueFunctionCallNode(ICompilerContext context, SingleValueFunctionCallNode node) {
         switch (node.Name.ToLowerInvariant())
         {
             case "contains":
@@ -398,7 +395,7 @@ public class SemanticVisitor
             default:
                 throw new NotImplementedException();
         }
-        return new ExpressionValue();
+        return new VisitResult();
     }
 
     // protected void VisitConvertNode(ICompilerContext context, ConvertNode node) {
@@ -472,49 +469,4 @@ public class SemanticVisitor
 }
 
 
-public class ExpressionValue
-{
 
-}
-
-public class ConstantValue : ExpressionValue
-{
-    public object? Value {get; set;}
-}
-
-
-public class PathValue : ExpressionValue
-{
-    public EdmPath ResourcePath {get; set;} = null!;
-}
-
-public class PropertyReference : PathValue
-{
-    public EdmStructuralProperty Property {get; set;} = null!;
-}
-
-public class Variable : PathValue
-{
-    public EdmEntityType Type {get; set;} = null!;
-
-    public String Name {get; set;} = null!;
-}
-
-
-public class Filter : ExpressionValue
-{
-
-}
-
-
-public class BinaryFilter : Filter
-{
-    public PropertyReference PropertyReference {get; set;} = null!;
-    public BinaryOperatorKind OperatorKind = BinaryOperatorKind.Equal;
-    public object? Value = null;
-}
-
-public class AndFilter : Filter
-{
-    public List<Filter> Filters {get; set;} = new List<Filter>();
-}

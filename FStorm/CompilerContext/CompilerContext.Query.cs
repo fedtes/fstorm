@@ -7,7 +7,7 @@ namespace FStorm;
 
 public partial class CompilerContext
 {
-    EdmPath ICompilerContext.AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
+    public EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
     {
         var p = ((ICompilerContext)this).Aliases.AddOrGet(edmPath);
         this.MainQuery.From(edmEntityType.Table + " as " + p.ToString());
@@ -15,7 +15,7 @@ public partial class CompilerContext
         return edmPath;
     }
 
-    EdmPath ICompilerContext.AddJoin(EdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath)
+    public EdmPath AddJoin(EdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath)
     {
         if (((ICompilerContext)this).Aliases.Contains(leftPath)) return leftPath;
         var r = ((ICompilerContext)this).Aliases.AddOrGet(rightPath);
@@ -25,13 +25,13 @@ public partial class CompilerContext
         return leftPath;
     }
 
-    void ICompilerContext.AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
+    public void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
     {
         var p = ((ICompilerContext)this).Aliases.AddOrGet(edmPath);
         ActiveQuery.Select($"{p}.{property.columnName} as {customName ?? p + "/" + property.Name}");
     }
 
-    void ICompilerContext.AddSelectKey(EdmPath? path, EdmEntityType? type)
+    public void AddSelectKey(EdmPath? path, EdmEntityType? type)
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(type);
@@ -39,7 +39,7 @@ public partial class CompilerContext
         ((ICompilerContext)this).AddSelect(path, type.GetEntityKey(), $"{p}/:key");
     }
 
-    void ICompilerContext.AddSelectAll(EdmPath? path, EdmEntityType? type)
+    public void AddSelectAll(EdmPath? path, EdmEntityType? type)
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(type);
@@ -49,13 +49,13 @@ public partial class CompilerContext
         }
     }
 
-    void ICompilerContext.AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty)
+    public void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty)
     {
         var p = ((ICompilerContext)this).Aliases.AddOrGet(edmPath);
         ActiveQuery.AsCount(new string[] { $"{p}.{edmStructuralProperty.columnName}" });
     }
 
-    void ICompilerContext.AddFilter(BinaryFilter filter)
+    public void AddFilter(BinaryFilter filter)
     {
         var p = ((ICompilerContext)this).Aliases.AddOrGet(filter.PropertyReference.ResourcePath);
         switch (filter.OperatorKind)
@@ -124,7 +124,7 @@ public partial class CompilerContext
         }
     }
 
-    void ICompilerContext.AddOrderBy(EdmPath edmPath, EdmStructuralProperty property, OrderByDirection direction)
+    public void AddOrderBy(EdmPath edmPath, EdmStructuralProperty property, OrderByDirection direction)
     {
         var p = ((ICompilerContext)this).Aliases.AddOrGet(edmPath);
         if (direction == OrderByDirection.Ascending)
@@ -137,7 +137,7 @@ public partial class CompilerContext
             ActiveQuery.OrderByDesc($"{p}.{property.columnName}");
         }
     }
-    void ICompilerContext.WrapQuery(EdmPath resourcePath)
+    public void WrapQuery(EdmPath resourcePath)
     {
         if (scope.Count > 1 || scope.Peek().ScopeType != CompilerScope.ROOT)
         {
@@ -154,12 +154,12 @@ public partial class CompilerContext
         SetMainQuery(((CompilerContext)tmpctx).ActiveQuery.From(this.ActiveQuery, a), tmpctx.Aliases);
     }
 
-    void ICompilerContext.AddLimit(long top)
+    public void AddLimit(long top)
     {
         ActiveQuery.Limit(top);
     }
 
-    void ICompilerContext.AddOffset(long skip)
+    public void AddOffset(long skip)
     {
         ActiveQuery.Offset(skip);
     }

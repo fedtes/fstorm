@@ -46,7 +46,7 @@ public partial class CompilerContext
     /// <summary>
     /// Open an "AND" scope. While in that the where clauses are in AND relation each others 
     /// </summary>
-    void ICompilerContext.OpenAndScope()
+    public void OpenAndScope()
     {
         if (ActiveScope.ScopeType != CompilerScope.AND)
         {
@@ -61,7 +61,7 @@ public partial class CompilerContext
     /// <summary>
     /// Close the current AND scope
     /// </summary>
-    void ICompilerContext.CloseAndScope()
+    public void CloseAndScope()
     {
         if (scope.Peek().ScopeType == CompilerScope.AND)
         {
@@ -77,7 +77,7 @@ public partial class CompilerContext
     /// <summary>
     /// Open an "OR" scope. While in that the where clauses are in OR relation each others 
     /// </summary>
-    void ICompilerContext.OpenOrScope()
+    public void OpenOrScope()
     {
         if (ActiveScope.ScopeType != CompilerScope.OR)
         {
@@ -92,7 +92,7 @@ public partial class CompilerContext
     /// <summary>
     /// Close the current OR scope
     /// </summary>
-    void ICompilerContext.CloseOrScope()
+    public void CloseOrScope()
     {
         if (scope.Peek().ScopeType == CompilerScope.OR)
         {
@@ -108,7 +108,7 @@ public partial class CompilerContext
     /// <summary>
     /// Open an "NOT" scope. While in that the "where" clauses are wrapped around NOT 
     /// </summary>
-    void ICompilerContext.OpenNotScope()
+    public void OpenNotScope()
     {
         scope.Push(new CompilerScope(CompilerScope.NOT, service.serviceProvider.GetService<IQueryBuilder>()!));
     }
@@ -116,7 +116,7 @@ public partial class CompilerContext
     /// <summary>
     /// Close the current NOT scope
     /// </summary>
-    void ICompilerContext.CloseNotScope()
+    public void CloseNotScope()
     {
         var s = scope.Pop();
         (IsOr ? ActiveQuery.Or() : ActiveQuery).Not().Where(_q => s.Query);
@@ -127,7 +127,7 @@ public partial class CompilerContext
     /// Open a variable scope by pushing a variable into the current context. Variable are visibile from all "children" scope opened from here.
     /// </summary>
     /// <param name="variable"></param>
-    void ICompilerContext.OpenVariableScope(Variable variable)
+    public void OpenVariableScope(Variable variable)
     {
         var s = new CompilerScope(CompilerScope.VARIABLE, ActiveQuery, variable);
         scope.Push(s);
@@ -137,7 +137,7 @@ public partial class CompilerContext
     /// Close current variable scope and pop the variable out of the visibility, destroying it.
     /// </summary>
     /// <exception cref="ApplicationException"></exception>
-    void ICompilerContext.CloseVariableScope()
+    public void CloseVariableScope()
     {
         var s = scope.Pop();
         if (s.ScopeType != CompilerScope.VARIABLE)
@@ -147,7 +147,7 @@ public partial class CompilerContext
     /// <summary>
     /// Open a scope where handling the ANY operator. This open a sub-query where all operations are perfomed until the scope is closed.
     /// </summary>
-    void ICompilerContext.OpenAnyScope()
+    public void OpenAnyScope()
     {
         var anyQ = service.serviceProvider.GetService<IQueryBuilder>()!;
         var s = new CompilerScope(CompilerScope.ANY, anyQ, new AliasStore("ANY"));
@@ -172,7 +172,7 @@ public partial class CompilerContext
     /// Close the current ANY scope and link the resutl to the main query.
     /// </summary>
     /// <exception cref="ApplicationException"></exception>
-    void ICompilerContext.CloseAnyScope()
+    public void CloseAnyScope()
     {
         var s = scope.Pop();
         if (s.ScopeType != CompilerScope.ANY) throw new ApplicationException("Should not pass here!!");
@@ -183,7 +183,7 @@ public partial class CompilerContext
     /// <summary>
     /// Open a scope where handling the ALL operator. This open a sub-query where all operations are perfomed until the scope is closed.
     /// </summary>
-    void ICompilerContext.OpenAllScope()
+    public void OpenAllScope()
     {
         var anyQ = service.serviceProvider.GetService<IQueryBuilder>()!;
         var s = new CompilerScope(CompilerScope.ALL, anyQ, new AliasStore("ALL"));
@@ -208,14 +208,14 @@ public partial class CompilerContext
     /// Close the current ALL scope and link the resutl to the main query.
     /// </summary>
     /// <exception cref="ApplicationException"></exception>
-    void ICompilerContext.CloseAllScope()
+    public void CloseAllScope()
     {
         var s = scope.Pop();
         if (s.ScopeType != CompilerScope.ALL) throw new ApplicationException("Should not pass here!!");
         (IsOr ? ActiveQuery.Or() : ActiveQuery).Not().WhereExists(s.Query);
     }
 
-    ICompilerContext ICompilerContext.OpenExpansionScope(ExpandedNavigationSelectItem i)
+    public ICompilerContext OpenExpansionScope(ExpandedNavigationSelectItem i)
     {
         ICompilerContext expansionContext = service.serviceProvider.GetService<CompilerContextFactory>()!
             .CreateExpansionContext(i.PathToNavigationProperty, i.FilterOption, i.SelectAndExpand, i.OrderByOption, new PaginationClause(i.TopOption, i.SkipOption));
@@ -225,7 +225,7 @@ public partial class CompilerContext
         return expansionContext;
     }
 
-    void ICompilerContext.CloseExpansionScope(ICompilerContext expansionContext, ExpandedNavigationSelectItem i)
+    public void CloseExpansionScope(ICompilerContext expansionContext, ExpandedNavigationSelectItem i)
     {
 
         var s = scope.Pop();

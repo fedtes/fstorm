@@ -17,9 +17,9 @@ namespace FStorm
         /// <summary>
         /// List of all aliases used in the From clause
         /// </summary>
-        AliasStore ICompilerContext.Aliases { get => MainScope.Aliases; }
+        public AliasStore Aliases { get => MainScope.Aliases; }
         private string _UriRequest;
-        string ICompilerContext.UriRequest { get => _UriRequest; }
+        public string UriRequest { get => _UriRequest; }
 
         private OutputKind outputKind;
         private EdmPath? resourcePath = null;
@@ -34,7 +34,7 @@ namespace FStorm
 
         private Dictionary<string, ICompilerContext> subcontextes = new Dictionary<string, ICompilerContext>();
 
-        public CompilerContext(ODataService service,
+        internal CompilerContext(ODataService service,
                                string UriRequest,
                                ODataPath oDataPath,
                                FilterClause filter,
@@ -59,29 +59,29 @@ namespace FStorm
             scope.Clear();
             scope.Push(new CompilerScope(CompilerScope.ROOT, query, aliasStore));
         }
-        SQLCompiledQuery ICompilerContext.Compile() => ActiveQuery.Compile();
-        ODataPath ICompilerContext.GetOdataRequestPath() => oDataPath;
-        FilterClause ICompilerContext.GetFilterClause() => filter;
-        SelectExpandClause ICompilerContext.GetSelectAndExpand() => selectExpand;
-        PaginationClause ICompilerContext.GetPaginationClause() => pagination;
-        OrderByClause ICompilerContext.GetOrderByClause() => orderBy;
-        string ICompilerContext.GetSkipToken() => skipToken;
-        OutputKind ICompilerContext.GetOutputKind() => outputKind;
-        void ICompilerContext.SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
-        EdmPath? ICompilerContext.GetOutputPath() => resourcePath;
-        void ICompilerContext.SetOutputPath(EdmPath ResourcePath)
+        public SQLCompiledQuery Compile() => ActiveQuery.Compile();
+        public ODataPath GetOdataRequestPath() => oDataPath;
+        public FilterClause GetFilterClause() => filter;
+        public SelectExpandClause GetSelectAndExpand() => selectExpand;
+        public PaginationClause GetPaginationClause() => pagination;
+        public OrderByClause GetOrderByClause() => orderBy;
+        public string GetSkipToken() => skipToken;
+        public OutputKind GetOutputKind() => outputKind;
+        public void SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
+        public EdmPath? GetOutputPath() => resourcePath;
+        public void SetOutputPath(EdmPath ResourcePath)
         {
             resourcePath = ResourcePath;
             ((ICompilerContext)this).SetOutputType(ResourcePath.GetEdmEntityType());
         }
 
-        bool ICompilerContext.HasFrom() => MainScope.HasFromClause;
+        public bool HasFrom() => MainScope.HasFromClause;
 
-        EdmEntityType? ICompilerContext.GetOutputType() => resourceEdmType;
-        void ICompilerContext.SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
-        IQueryBuilder ICompilerContext.GetQuery() => ActiveQuery;
+        public EdmEntityType? GetOutputType() => resourceEdmType;
+        public void SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
+        public IQueryBuilder GetQuery() => ActiveQuery;
 
-        List<Variable> ICompilerContext.GetVariablesInScope()
+        public List<Variable> GetVariablesInScope()
         {
             return scope.Where(x => x.ScopeType == CompilerScope.VARIABLE)
                 .Select(x => x.Variable)
@@ -90,12 +90,12 @@ namespace FStorm
                 .ToList();
         }
 
-        Variable? ICompilerContext.GetCurrentVariableInScope()
+        public Variable? GetCurrentVariableInScope()
         {
             return scope.FirstOrDefault(x => x.ScopeType == CompilerScope.VARIABLE)?.Variable;
         }
 
-        ICompilerContext ICompilerContext.GetSubContext(string name)
+        public ICompilerContext GetSubContext(string name)
         {
             if (subcontextes.ContainsKey(name))
                 return subcontextes[name];
@@ -103,9 +103,9 @@ namespace FStorm
                 throw new ArgumentException($"Subcontext with name {name} not found", nameof(name));
         }
 
-        bool ICompilerContext.HasSubContext() => subcontextes.Any();
+        public bool HasSubContext() => subcontextes.Any();
 
-        IDictionary<string, ICompilerContext> ICompilerContext.GetSubContextes() => subcontextes;
+        public  IDictionary<string, ICompilerContext> GetSubContextes() => subcontextes;
 
 
         #region "private"
@@ -195,7 +195,7 @@ namespace FStorm
         Property,
         RawValue
     }
-    internal class AliasStore
+    public class AliasStore
     {
         private readonly string Prefix;
 

@@ -33,18 +33,5 @@ namespace FStorm.Test
         }
 
 
-        [Test]
-        public void It_Should_Create_Commands()
-        {
-            var _FStormService = serviceProvider.GetService<ODataService>();
-            if (_FStormService != null) 
-            {
-                //var cmd1 = _FStormService.Get();
-                //var cmd2 = _FStormService.Get();
-                //Assert.True(cmd1.CommandId != cmd2.CommandId);
-            }
-        }
-
-
     }
 }
