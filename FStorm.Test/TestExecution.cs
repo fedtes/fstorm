@@ -129,7 +129,7 @@ namespace FStorm.Test
             var nextLink = new Regex("\"@odata.nextLink\":\"(?'nextlink'[^\"]+)\"").Match(s).Groups["nextlink"].Value;
             var r1 = (await con.Get(nextLink).ToListAsync());
             Assert.AreEqual(10, r1.Count());
-            Assert.That(r1.First()[""], Is.EqualTo(""));
+            Assert.That(r1.First()["Number"], Is.EqualTo("132"));
         }
 
 

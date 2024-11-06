@@ -26,21 +26,21 @@ public class DeltaTokenService
         var y = x[1].Split(";");
         var _skip = int.Parse(y[0]);
         var _top = int.Parse(y[1]);
-        var _pageSize = _top - _skip;
+        _skip = _skip + _top;
         if (_url.Contains("?"))
         {
             if (_url.EndsWith("?"))
             {
-                return _url + "$skip=" + (_skip + _pageSize).ToString() + "&$top=" + (_top + _pageSize).ToString();
+                return _url + "$skip=" + _skip .ToString() + "&$top=" + _top.ToString();
             }
             else
             {
-                return _url + "&" + "$skip=" + (_skip + _pageSize).ToString() + "&$top=" + (_top + _pageSize).ToString();
+                return _url + "&" + "$skip=" + _skip .ToString() + "&$top=" + _top.ToString();
             }
         }
         else
         {
-            return _url + "?" + "$skip=" + (_skip + _pageSize).ToString() + "&$top=" + (_top + _pageSize).ToString();
+            return _url + "?" + "$skip=" + _skip .ToString() + "&$top=" + _top.ToString();
         }
 
     }
