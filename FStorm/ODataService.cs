@@ -11,14 +11,15 @@ namespace FStorm
         public static PluginRegistration AddFStorm(this IServiceCollection services, ODataOptions options)
         {
             services.AddTransient<EdmModel>();
-            services.AddSingleton<EdmPathFactory>();
             services.AddTransient<Connection>();
             services.AddTransient<Transaction>();
             services.AddTransient<Command>();
             services.AddTransient<Writer>();
-            services.AddSingleton<SemanticVisitor>();
             services.AddTransient<IQueryBuilder, SQLKataQueryBuilder>();
             services.AddTransient<IQueryExecutor, DBCommandQueryExecutor>();
+            services.AddTransient<IEntityAccessContext, EntityAccessContext>();
+            services.AddSingleton<EdmPathFactory>();
+            services.AddSingleton<SemanticVisitor>();
             services.AddSingleton<CompilerContextFactory>();
             services.AddSingleton<DeltaTokenService>();
             services.AddSingleton(p => new ODataService(p, options));

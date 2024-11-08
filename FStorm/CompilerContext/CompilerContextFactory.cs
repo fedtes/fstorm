@@ -42,4 +42,15 @@ public class CompilerContextFactory
 
     internal ICompilerContext CreateExpansionContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination) =>
         new ExpansionCompilerContext(service, oDataPath, filter, selectExpand,orderBy, pagination);
+
+
+    internal IQueryBuilderContext CreateQueryBuilderContext()
+    {
+        return new QueryBuilderContext(service);
+    }
+
+    internal IQueryBuilderContext CreateNoPluginQueryBuilderContext()
+    {
+        return new NoPluginQueryBuilderContext(service);
+    }
 }

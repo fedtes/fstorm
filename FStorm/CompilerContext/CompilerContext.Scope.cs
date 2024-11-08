@@ -27,22 +27,22 @@ public partial class QueryBuilderContext
     /// <summary>
     /// Return the first "query builder" scope containing a from clasue. This may be the ROOT or a suquery actually processing.
     /// </summary>
-    private CompilerScope MainScope { get => scopes.First(x => x.ScopeType == CompilerScope.ROOT || x.ScopeType == CompilerScope.ANY || x.ScopeType == CompilerScope.ALL); }
+    protected CompilerScope MainScope { get => scopes.First(x => x.ScopeType == CompilerScope.ROOT || x.ScopeType == CompilerScope.ANY || x.ScopeType == CompilerScope.ALL); }
 
     /// <summary>
     /// Return the first MAIN 
     /// </summary>
-    private CompilerScope RootScope { get => scopes.First(x => x.ScopeType == CompilerScope.ROOT); }
+    protected CompilerScope RootScope { get => scopes.First(x => x.ScopeType == CompilerScope.ROOT); }
 
     /// <summary>
     /// Shortcut to access the underlyng query builder of the <see cref="MainScope"/>.
     /// </summary>
-    private IQueryBuilder MainQuery { get => MainScope.Query is null ? throw new ArgumentNullException("MainScope.Query") : MainScope.Query; }
+    protected IQueryBuilder MainQuery { get => MainScope.Query is null ? throw new ArgumentNullException("MainScope.Query") : MainScope.Query; }
 
     /// <summary>
     /// Shortcut to access the underlyng query builder of the <see cref="ActiveScope"/>.
     /// </summary>
-    private IQueryBuilder ActiveQuery { get => ActiveScope.Query is null ? throw new ArgumentNullException("ActiveScope.Query") : ActiveScope.Query; }
+    protected IQueryBuilder ActiveQuery { get => ActiveScope.Query is null ? throw new ArgumentNullException("ActiveScope.Query") : ActiveScope.Query; }
 
     /// <summary>
     /// Open an "AND" scope. While in that the where clauses are in AND relation each others 

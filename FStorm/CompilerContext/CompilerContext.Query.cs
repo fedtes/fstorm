@@ -9,10 +9,12 @@ public partial class QueryBuilderContext : IQueryBuilderContext
 {
     private readonly ODataService service;
 
+    protected virtual string AliasPrefix {get => "P"; }
+
     internal QueryBuilderContext(ODataService service)
     {
         this.service = service;
-        SetMainQuery(service.serviceProvider.GetService<IQueryBuilder>()!);
+        SetMainQuery(service.serviceProvider.GetService<IQueryBuilder>()!, new AliasStore(AliasPrefix));
     }
 
     /// <summary>
@@ -28,10 +30,42 @@ public partial class QueryBuilderContext : IQueryBuilderContext
     public bool HasFrom() => MainScope.HasFromClause;
     public IQueryBuilder GetQuery() => ActiveQuery;
 
+    internal virtual List<IOnEntityAccess> GetOnEntityAccessPlugins(EdmEntityType edmEntityType) 
+    {
+        return service.serviceProvider.GetServices<IOnEntityAccess>().Where(x => x.EntityName == edmEntityType.FullName()).ToList();
+    }
+
     public EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
     {
-        var p = this.Aliases.AddOrGet(edmPath);
-        this.MainQuery.From(edmEntityType.Table + " as " + p.ToString());
+        var _alias = this.Aliases.AddOrGet(edmPath);
+        var plugins = GetOnEntityAccessPlugins(edmEntityType);
+
+        if (!plugins.Any()) 
+        {
+            MainQuery.From(edmEntityType.Table + " as " + _alias.ToString());
+        }
+        else 
+        {
+            EntityAccessContext _EntityAccessContext =(EntityAccessContext)service.serviceProvider.GetService<IEntityAccessContext>()!;
+            _EntityAccessContext.Kind = IEntityAccessContext.TABLE_STRING;
+            _EntityAccessContext.InitialTableString = edmEntityType.Table;
+            _EntityAccessContext.Alias = _alias;
+            _EntityAccessContext.Me = new Variable() { Name= "$me", ResourcePath = edmPath, Type = edmEntityType};
+        
+            foreach (var plugin in plugins)
+            {
+                plugin.OnAccess(_EntityAccessContext);
+            }
+
+            if (_EntityAccessContext.Kind == IEntityAccessContext.TABLE_STRING) 
+            {
+                this.MainQuery.From(_EntityAccessContext.GetTableString() + " as " + _alias.ToString());
+            }
+            else 
+            {
+                this.MainQuery.From(_EntityAccessContext.GetNestedQuery(), _alias.ToString());
+            }
+        }
         this.MainScope.HasFromClause = true;
         return edmPath;
     }
@@ -46,7 +80,7 @@ public partial class QueryBuilderContext : IQueryBuilderContext
         return leftPath;
     }
 
-    public void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
+    public virtual void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
     {
         var p = this.Aliases.AddOrGet(edmPath);
         ActiveQuery.Select($"{p}.{property.columnName} as {customName ?? p + "/" + property.Name}");
@@ -190,5 +224,30 @@ public partial class QueryBuilderContext : IQueryBuilderContext
     public void AddOffset(long skip)
     {
         ActiveQuery.Offset(skip);
+    }
+}
+
+
+
+
+public class NoPluginQueryBuilderContext : QueryBuilderContext
+{
+    internal NoPluginQueryBuilderContext(ODataService service) : base(service)
+    {    }
+
+    protected override string AliasPrefix => "X";
+
+    /// <summary>
+    /// Override to prevent fire of plugin from plugin execution to prevent loops. Could be done better by filtering only the current invoked entity.
+    /// </summary>
+    internal override List<IOnEntityAccess> GetOnEntityAccessPlugins(EdmEntityType edmEntityType) => new List<IOnEntityAccess>();
+
+    /// <summary>
+    /// Avoid computing aliases on output columns used in the query. This allow to see the nested query as a "table" by letting the columns name explicitly.
+    /// </summary>
+    public override void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
+    {
+        var p = this.Aliases.AddOrGet(edmPath);
+        ActiveQuery.Select($"{p}.{property.columnName}{(!String.IsNullOrEmpty(customName) ? "as " + customName : "" )}");
     }
 }

@@ -41,7 +41,7 @@ namespace FStorm
     /// </summary>
     public class Variable : PathValue
     {
-        public EdmEntityType Type {get; set;} = null!;
+        public Microsoft.OData.Edm.IEdmEntityType Type {get; set;} = null!;
 
         public String Name {get; set;} = null!;
     }
