@@ -8,9 +8,9 @@ namespace FStorm
 {
     public static class ServiceCollectionExtensions
     {
-        public static void AddFStorm(this IServiceCollection services, EdmModel model, ODataOptions options)
+        public static PluginRegistration AddFStorm(this IServiceCollection services, ODataOptions options)
         {
-            services.AddSingleton(p => new ODataService(p, model, options));
+            services.AddTransient<EdmModel>();
             services.AddSingleton<EdmPathFactory>();
             services.AddTransient<Connection>();
             services.AddTransient<Transaction>();
@@ -21,6 +21,27 @@ namespace FStorm
             services.AddTransient<IQueryExecutor, DBCommandQueryExecutor>();
             services.AddSingleton<CompilerContextFactory>();
             services.AddSingleton<DeltaTokenService>();
+            services.AddSingleton(p => new ODataService(p, options));
+            return new PluginRegistration(services);
+        }
+    }
+
+    public sealed class PluginRegistration
+    {
+        private readonly IServiceCollection services;
+
+        internal PluginRegistration(IServiceCollection services)
+        {
+            this.services = services;
+        }
+
+        /// <summary>
+        /// Register a plugin that intercept event of accessing entities.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public void AddOnEntityAccess<T>() where T : class, IOnEntityAccess
+        {
+            services.AddTransient<IOnEntityAccess, T>();
         }
     }
 
@@ -58,14 +79,22 @@ namespace FStorm
         internal IServiceProvider serviceProvider;
         internal readonly ODataOptions options;
 
-        public ODataService(IServiceProvider serviceProvider, EdmModel model, ODataOptions options) {
+        private EdmModel? _model = null;
+
+        internal ODataService(IServiceProvider serviceProvider, ODataOptions options) {
             this.serviceProvider = serviceProvider;
-            Model = model;
+            //Model = model;
             this.options = options;
             ServiceRoot = new Uri(options.ServiceRoot);
         }
 
-        public EdmModel Model { get; }
+        public EdmModel CreateNewModel() 
+        {
+            _model = serviceProvider.GetService<EdmModel>()!;
+            return _model;
+        }
+
+        public EdmModel Model { get => _model is null ? throw new ArgumentNullException("Model") : _model; }
         public Uri ServiceRoot { get; }
 
         public string GetMetadataDocument()

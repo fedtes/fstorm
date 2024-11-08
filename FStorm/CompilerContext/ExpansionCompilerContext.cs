@@ -3,7 +3,7 @@ using Microsoft.OData.UriParser;
 
 namespace FStorm;
 
-public class ExpansionCompilerContext : CompilerContext, ICompilerContext
+public class ExpansionCompilerContext : CompilerContext, IQueryBuilderContext
 {
     public ExpansionCompilerContext(
         ODataService service,
@@ -17,12 +17,12 @@ public class ExpansionCompilerContext : CompilerContext, ICompilerContext
     internal int Skip {get; private set;} = 0;
     internal int Top {get; private set;} = int.MaxValue;
 
-    void ICompilerContext.AddOffset(long skip)
+    void IQueryBuilderContext.AddOffset(long skip)
     {
         this.Skip = Convert.ToInt32(skip);
     }
 
-    void ICompilerContext.AddLimit(long top)
+    void IQueryBuilderContext.AddLimit(long top)
     {
         this.Top= Convert.ToInt32(top);
     }

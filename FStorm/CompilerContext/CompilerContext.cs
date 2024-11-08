@@ -7,236 +7,119 @@ namespace FStorm
     /// <summary>
     /// Model passed between compilers.
     /// </summary>
-    public partial class CompilerContext : ICompilerContext
+    public class CompilerContext : ICompilerContext
     {
-        /// <summary>
-        /// True if in the current scope, the where clauses, are in OR relation each others.
-        /// </summary>
-        private bool IsOr { get => ActiveScope.ScopeType == CompilerScope.OR; }
-
-        /// <summary>
-        /// List of all aliases used in the From clause
-        /// </summary>
-        public AliasStore Aliases { get => MainScope.Aliases; }
-        private string _UriRequest;
-        public string UriRequest { get => _UriRequest; }
-
-        private OutputKind outputKind;
-        private EdmPath? resourcePath = null;
-        private EdmEntityType? resourceEdmType = null;
+        private readonly ISubContextSupportContext subContextSupportContext;
+        private readonly IOutputContext outputContext;
+        private readonly IOdataParserContext odataParserContext;
+        private readonly IQueryBuilderContext queryBuilderContext;
         private readonly ODataService service;
-        private ODataPath oDataPath;
-        private FilterClause filter;
-        private SelectExpandClause selectExpand;
-        private readonly OrderByClause orderBy;
-        private readonly PaginationClause pagination;
-        private readonly string skipToken;
 
-        private Dictionary<string, ICompilerContext> subcontextes = new Dictionary<string, ICompilerContext>();
-
-        internal CompilerContext(ODataService service,
-                               string UriRequest,
-                               ODataPath oDataPath,
-                               FilterClause filter,
-                               SelectExpandClause selectExpand,
-                               OrderByClause orderBy,
-                               PaginationClause pagination,
-                               string skipToken)
+        internal CompilerContext(ODataService service, string UriRequest, ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination, string skipToken)
         {
             this.service = service;
-            _UriRequest = UriRequest;
-            this.oDataPath = oDataPath;
-            this.filter = filter;
-            this.selectExpand = selectExpand;
-            this.orderBy = orderBy;
-            this.pagination = pagination;
-            this.skipToken = skipToken;
-            SetMainQuery(service.serviceProvider.GetService<IQueryBuilder>()!);
+            this.odataParserContext = new OdataParserContext(UriRequest,oDataPath,filter,selectExpand,orderBy,pagination,skipToken);
+            this.subContextSupportContext = new SubContextSupportContext(this, service, this.Push, this.Pop);
+            this.queryBuilderContext = new QueryBuilderContext(service);
+            this.outputContext = new OutputContext();
         }
 
-        private void SetMainQuery(IQueryBuilder query, AliasStore? aliasStore = null)
-        {
-            scope.Clear();
-            scope.Push(new CompilerScope(CompilerScope.ROOT, query, aliasStore));
-        }
-        public SQLCompiledQuery Compile() => ActiveQuery.Compile();
-        public ODataPath GetOdataRequestPath() => oDataPath;
-        public FilterClause GetFilterClause() => filter;
-        public SelectExpandClause GetSelectAndExpand() => selectExpand;
-        public PaginationClause GetPaginationClause() => pagination;
-        public OrderByClause GetOrderByClause() => orderBy;
-        public string GetSkipToken() => skipToken;
-        public OutputKind GetOutputKind() => outputKind;
-        public void SetOutputKind(OutputKind OutputType) { outputKind = OutputType; }
-        public EdmPath? GetOutputPath() => resourcePath;
-        public void SetOutputPath(EdmPath ResourcePath)
-        {
-            resourcePath = ResourcePath;
-            ((ICompilerContext)this).SetOutputType(ResourcePath.GetEdmEntityType());
-        }
+        public SQLCompiledQuery Compile() => ActiveScope.Query is null? throw new ArgumentNullException("ActiveScope.Query") : ActiveScope.Query.Compile();
+        public List<Variable> GetVariablesInScope() => queryBuilderContext.GetVariablesInScope();
 
-        public bool HasFrom() => MainScope.HasFromClause;
+        public Variable? GetCurrentVariableInScope() => queryBuilderContext.GetCurrentVariableInScope();
 
-        public EdmEntityType? GetOutputType() => resourceEdmType;
-        public void SetOutputType(EdmEntityType? ResourceEdmType) { resourceEdmType = ResourceEdmType; }
-        public IQueryBuilder GetQuery() => ActiveQuery;
+#region "SubContextSupportContext"
 
-        public List<Variable> GetVariablesInScope()
-        {
-            return scope.Where(x => x.ScopeType == CompilerScope.VARIABLE)
-                .Select(x => x.Variable)
-                .Where(x => x != null)
-                .Cast<Variable>()
-                .ToList();
-        }
+        public ICompilerContext GetSubContext(string name) => subContextSupportContext.GetSubContext(name);
 
-        public Variable? GetCurrentVariableInScope()
-        {
-            return scope.FirstOrDefault(x => x.ScopeType == CompilerScope.VARIABLE)?.Variable;
-        }
+        public bool HasSubContext() => subContextSupportContext.HasSubContext();
 
-        public ICompilerContext GetSubContext(string name)
-        {
-            if (subcontextes.ContainsKey(name))
-                return subcontextes[name];
-            else
-                throw new ArgumentException($"Subcontext with name {name} not found", nameof(name));
-        }
+        public IDictionary<string, ICompilerContext> GetSubContextes() => subContextSupportContext.GetSubContextes();
 
-        public bool HasSubContext() => subcontextes.Any();
+        public ICompilerContext OpenExpansionScope(ExpandedNavigationSelectItem i) => subContextSupportContext.OpenExpansionScope(i);
 
-        public  IDictionary<string, ICompilerContext> GetSubContextes() => subcontextes;
+        public void CloseExpansionScope(ICompilerContext expansionContext, ExpandedNavigationSelectItem i) => subContextSupportContext.CloseExpansionScope(expansionContext, i);
+#endregion
 
+        public void SetOutputKind(OutputKind OutputType) => outputContext.SetOutputKind(OutputType);
 
-        #region "private"
+        public OutputKind GetOutputKind() => outputContext.GetOutputKind();
 
-        private (EdmPath, IEdmElement) CreateSubQuery(Variable _it)
-        {
-            var _var = ((ICompilerContext)this).GetCurrentVariableInScope()!;
-            var _varElements = _var.ResourcePath.AsEdmElements();
-            var _tail = _var.ResourcePath - _it.ResourcePath;
-            /*
-                ~/t_0/t_1/t_2/t_3/t_4/t_5/t_6
-                |------------var-------------|
-                |--$it---|
-                         |-------tail--------|
-            */
+        public void SetOutputPath(EdmPath ResourcePath) => outputContext.SetOutputPath(ResourcePath);
 
-            for (int i = _it.ResourcePath.Count(); i < _varElements.Count(); i++)
-            {
-                if (i == _it.ResourcePath.Count())
-                {
-                    EdmNavigationProperty type = (EdmNavigationProperty)_varElements[i].Item2;
-                    ((ICompilerContext)this).AddFrom((EdmEntityType)type.Type.Definition.AsElementType(), _varElements[i].Item1);
-                }
-                else
-                {
-                    EdmNavigationProperty type = (EdmNavigationProperty)_varElements[i].Item2;
-                    ((ICompilerContext)this).AddJoin(type, _varElements[i].Item1 - 1, _varElements[i].Item1);
-                }
-            }
+        public EdmPath? GetOutputPath() => outputContext.GetOutputPath();
 
-            return _varElements[_it.ResourcePath.Count()];
-        }
+        public EdmEntityType? GetOutputType() => outputContext.GetOutputType();
 
-        #endregion
+        public void SetOutputType(EdmEntityType? ResourceEdmType) => outputContext.SetOutputType(ResourceEdmType);
+
+        public string UriRequest => odataParserContext.UriRequest;
+
+        public AliasStore Aliases => queryBuilderContext.Aliases;
+
+        public CompilerScope ActiveScope => queryBuilderContext.ActiveScope;
+
+        public ODataPath GetOdataRequestPath() => odataParserContext.GetOdataRequestPath();
+
+        public FilterClause GetFilterClause()  => odataParserContext.GetFilterClause();
+
+        public SelectExpandClause GetSelectAndExpand()  => odataParserContext.GetSelectAndExpand();
+
+        public PaginationClause GetPaginationClause() => odataParserContext.GetPaginationClause();
+
+        public OrderByClause GetOrderByClause()  => odataParserContext.GetOrderByClause();
+
+        public string GetSkipToken() => odataParserContext.GetSkipToken();
+
+        public bool HasFrom() => queryBuilderContext.HasFrom();
+        public IQueryBuilder GetQuery() => queryBuilderContext.GetQuery();
+
+        public void Push(CompilerScope scope) => queryBuilderContext.Push(scope);
+
+        public CompilerScope Pop() => queryBuilderContext.Pop();
+
+        public void OpenAndScope() => queryBuilderContext.OpenAndScope();
+
+        public void CloseAndScope() => queryBuilderContext.CloseAndScope();
+        public void OpenOrScope() => queryBuilderContext.OpenOrScope();
+
+        public void CloseOrScope() => queryBuilderContext.CloseOrScope();
+
+        public void OpenNotScope() => queryBuilderContext.OpenNotScope();
+
+        public void CloseNotScope() => queryBuilderContext.CloseNotScope();
+
+        public void OpenVariableScope(Variable variable) => queryBuilderContext.OpenVariableScope(variable);
+
+        public void CloseVariableScope() => queryBuilderContext.CloseVariableScope();
+
+        public void OpenAnyScope() => queryBuilderContext.OpenAnyScope();
+        public void CloseAnyScope() => queryBuilderContext.CloseAnyScope();
+
+        public void OpenAllScope() => queryBuilderContext.OpenAllScope();
+
+        public void CloseAllScope() => queryBuilderContext.CloseAllScope();
+
+        public EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath) => queryBuilderContext.AddFrom(edmEntityType,edmPath);
+        public EdmPath AddJoin(EdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath) => queryBuilderContext.AddJoin(rightNavigationProperty,rightPath,leftPath);
+
+        public void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null) => queryBuilderContext.AddSelect(edmPath,property,customName);
+
+        public void AddSelectKey(EdmPath? path, EdmEntityType? type) => queryBuilderContext.AddSelectKey(path, type);
+        public void AddSelectAll(EdmPath? path, EdmEntityType? type) => queryBuilderContext.AddSelectAll(path, type);
+
+        public void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty) => queryBuilderContext.AddCount(edmPath, edmStructuralProperty);
+
+        public void AddFilter(BinaryFilter filter) => queryBuilderContext.AddFilter(filter);
+
+        public void AddOrderBy(EdmPath edmPath, EdmStructuralProperty property, OrderByDirection direction) => queryBuilderContext.AddOrderBy(edmPath,property, direction);
+
+        public void WrapQuery(IOdataParserContext context, EdmPath resourcePath) => queryBuilderContext.WrapQuery(context, resourcePath);
+
+        public void AddLimit(long top) => queryBuilderContext.AddLimit(top);
+
+        public void AddOffset(long skip) => queryBuilderContext.AddOffset(skip);
     }
 
-    internal class CompilerScope
-    {
-        public const string ROOT = "main";
-        public const string AND = "and";
-        public const string NOT = "not";
-        public const string OR = "or";
-        public const string NO_SCOPE = "noscope";
-        public const string VARIABLE = "var";
-        public const string ANY = "any";
-        public const string ALL = "all";
-        public const string EXPAND = "expand";
-
-        public readonly IQueryBuilder Query;
-        public readonly string ScopeType;
-        public readonly Variable? Variable;
-        public readonly AliasStore Aliases;
-        public bool HasFromClause = false;
-
-        internal CompilerScope(string scopeType, IQueryBuilder query)
-        {
-            ScopeType = scopeType;
-            Query = query;
-            Aliases = new AliasStore();
-        }
-
-        internal CompilerScope(string scopeType, IQueryBuilder query, AliasStore? aliasStore)
-        {
-            ScopeType = scopeType;
-            Query = query;
-            Aliases = aliasStore ?? new AliasStore();
-        }
-
-        internal CompilerScope(string scopeType, IQueryBuilder query, Variable variable)
-        {
-            ScopeType = scopeType;
-            Query = query;
-            this.Variable = variable;
-            Aliases = new AliasStore();
-        }
-
-        public override string ToString()
-        {
-            return ScopeType;
-        }
-    }
-
-    public enum OutputKind
-    {
-        Collection,
-        Object,
-        Property,
-        RawValue
-    }
-    public class AliasStore
-    {
-        private readonly string Prefix;
-
-        private int index = 0;
-
-        public AliasStore()
-        {
-            Prefix = "P";
-        }
-
-        public AliasStore(string Prefix)
-        {
-            this.Prefix = Prefix;
-        }
-
-        private Dictionary<EdmPath, string> aliases = new Dictionary<EdmPath, string>();
-
-        private string ComputeNewAlias(EdmPath path)
-        {
-            index++;
-            return $"{Prefix}{index}";
-        }
-
-        public string AddOrGet(EdmPath path)
-        {
-            if (!Contains(path))
-            {
-                var a = ComputeNewAlias(path);
-                aliases.Add(path, a);
-            }
-            return aliases[path];
-        }
-
-        public bool Contains(EdmPath path)
-        {
-            return aliases.ContainsKey(path);
-        }
-
-        internal EdmPath? TryGet(string v)
-        {
-            return aliases.FirstOrDefault(x => x.Value == v).Key;
-        }
-    }
 }

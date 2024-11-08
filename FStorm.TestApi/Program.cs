@@ -17,7 +17,20 @@ internal class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        var edm = new EdmModel();
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+        builder.Services.AddFStorm(
+            new ODataOptions() 
+            {
+                SQLCompilerType = SQLCompilerType.MSSQL, 
+                ServiceRoot = "http://localhost:5056/odata/v1/"
+            }
+        );
+
+
+        var app = builder.Build();
+
+        var edm = app.Services.GetService<ODataService>()!.CreateNewModel();
         var _gamba =  edm.AddEntityType("my","Gamba","Gambe");
         var _fkIDSedia = _gamba.AddStructuralProperty("IDSedia", Microsoft.OData.Edm.EdmPrimitiveTypeKind.Int32, false);
         _gamba.AddStructuralProperty("Rotta", Microsoft.OData.Edm.EdmPrimitiveTypeKind.Int32, false);
@@ -36,23 +49,6 @@ internal class Program
         var cnt = edm.AddEntityContainer("my","default");
         cnt.AddEntitySet("Sedie", _sedia);
         cnt.AddEntitySet("Gambe", _gamba);
-
-
-     
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
-        builder.Services.AddFStorm(
-            //MockModel.PrepareModel(), 
-            edm,
-            new ODataOptions() 
-            {
-                SQLCompilerType = SQLCompilerType.MSSQL, 
-                ServiceRoot = "http://localhost:5056/odata/v1/"
-            }
-        );
-
-
-        var app = builder.Build();
 
         // Configure the HTTP request pipeline.
         // if (app.Environment.IsDevelopment())

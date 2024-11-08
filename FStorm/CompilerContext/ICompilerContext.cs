@@ -4,7 +4,7 @@ using Microsoft.OData.UriParser;
 
 namespace FStorm;
 
-public interface IOdataParseContext
+public interface IOdataParserContext
 {
     string UriRequest { get; }
     ODataPath GetOdataRequestPath();
@@ -15,6 +15,10 @@ public interface IOdataParseContext
     string GetSkipToken();
 }
 
+
+/// <summary>
+/// Introduce support for exposing the output information of the OData request.
+/// </summary>
 public interface IOutputContext
 {
     void SetOutputKind(OutputKind OutputType);
@@ -28,27 +32,51 @@ public interface IOutputContext
 }
 
 
-public interface ICompilerContext : IOdataParseContext, IOutputContext
+/// <summary>
+/// Introduce support for managing hiearachy contextes
+/// </summary>
+public interface ISubContextSupportContext
+{
+    ICompilerContext GetSubContext(string name);
+    bool HasSubContext();
+    IDictionary<string, ICompilerContext> GetSubContextes();
+
+    /// <summary>
+    /// Open a special scope that create a new <see cref="ICompilerContext"/> and used to create as subcontext. Used when parsing Expand clauses.
+    /// </summary>
+    /// <returns></returns>
+    ICompilerContext OpenExpansionScope(ExpandedNavigationSelectItem i);
+    /// <summary>
+    /// Close the current expation scope and join back the information to the parent context.
+    /// </summary>
+    /// <returns></returns>
+    void CloseExpansionScope(ICompilerContext expansionContext, ExpandedNavigationSelectItem i);
+}
+
+/// <summary>
+/// Introduce support for Query building and manipulation
+/// </summary>
+public interface IQueryBuilderContext
 {
     /// <summary>
     /// Keeps track of the aliases used in the query and the meaning they have.
     /// </summary>
     AliasStore Aliases { get; }
-    /// <summary>
-    /// Ask the underline query builder to produce an executable query.
-    /// </summary>
-    /// <returns></returns>
-    SQLCompiledQuery Compile();
-
     bool HasFrom();
-   
     IQueryBuilder GetQuery();
+
+    CompilerScope ActiveScope { get; }
+
     List<Variable> GetVariablesInScope();
+
     Variable? GetCurrentVariableInScope();
-    ICompilerContext GetSubContext(string name);
-    bool HasSubContext();
-    IDictionary<string, ICompilerContext> GetSubContextes();
+
 #region "scopes"
+
+    void Push(CompilerScope scope);
+
+    CompilerScope Pop();
+
     /// <summary>
     /// Open an "AND" scope. While in that the where clauses are in AND relation each others 
     /// </summary>
@@ -101,16 +129,6 @@ public interface ICompilerContext : IOdataParseContext, IOutputContext
     /// </summary>
     /// <exception cref="ApplicationException"></exception>
     void CloseAllScope();
-    /// <summary>
-    /// Open a special scope that create a new <see cref="ICompilerContext"/> and used to create as subcontext. Used when parsing Expand clauses.
-    /// </summary>
-    /// <returns></returns>
-    ICompilerContext OpenExpansionScope(ExpandedNavigationSelectItem i);
-    /// <summary>
-    /// Close the current expation scope and join back the information to the parent context.
-    /// </summary>
-    /// <returns></returns>
-    void CloseExpansionScope(ICompilerContext expansionContext, ExpandedNavigationSelectItem i);
 
 #endregion
 
@@ -123,11 +141,20 @@ public interface ICompilerContext : IOdataParseContext, IOutputContext
     void AddSelectAll(EdmPath? path, EdmEntityType? type);
     void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty);
     void AddFilter(BinaryFilter filter);
-    void AddOrderBy(EdmPath edmPath, EdmStructuralProperty property,OrderByDirection direction );
-    void WrapQuery(EdmPath resourcePath);
+    void AddOrderBy(EdmPath edmPath, EdmStructuralProperty property,OrderByDirection direction);
+    void WrapQuery(IOdataParserContext context,EdmPath resourcePath);
     void AddLimit(long top);
     void AddOffset(long skip);
 #endregion
+}
 
+
+public interface ICompilerContext : IOdataParserContext, IOutputContext, ISubContextSupportContext, IQueryBuilderContext
+{
+    /// <summary>
+    /// Ask the underline query builder to produce an executable query.
+    /// </summary>
+    /// <returns></returns>
+    SQLCompiledQuery Compile();
 
 }

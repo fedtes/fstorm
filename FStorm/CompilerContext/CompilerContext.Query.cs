@@ -5,11 +5,32 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace FStorm;
 
-public partial class CompilerContext
+public partial class QueryBuilderContext : IQueryBuilderContext
 {
+    private readonly ODataService service;
+
+    internal QueryBuilderContext(ODataService service)
+    {
+        this.service = service;
+        SetMainQuery(service.serviceProvider.GetService<IQueryBuilder>()!);
+    }
+
+    /// <summary>
+    /// True if in the current scope, the where clauses, are in OR relation each others.
+    /// </summary>
+    private bool IsOr { get => ActiveScope.ScopeType == CompilerScope.OR; }
+
+    /// <summary>
+    /// List of all aliases used in the From clause
+    /// </summary>
+    public AliasStore Aliases { get => MainScope.Aliases; }
+
+    public bool HasFrom() => MainScope.HasFromClause;
+    public IQueryBuilder GetQuery() => ActiveQuery;
+
     public EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
     {
-        var p = ((ICompilerContext)this).Aliases.AddOrGet(edmPath);
+        var p = this.Aliases.AddOrGet(edmPath);
         this.MainQuery.From(edmEntityType.Table + " as " + p.ToString());
         this.MainScope.HasFromClause = true;
         return edmPath;
@@ -17,9 +38,9 @@ public partial class CompilerContext
 
     public EdmPath AddJoin(EdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath)
     {
-        if (((ICompilerContext)this).Aliases.Contains(leftPath)) return leftPath;
-        var r = ((ICompilerContext)this).Aliases.AddOrGet(rightPath);
-        var l = ((ICompilerContext)this).Aliases.AddOrGet(leftPath);
+        if (this.Aliases.Contains(leftPath)) return leftPath;
+        var r = this.Aliases.AddOrGet(rightPath);
+        var l = this.Aliases.AddOrGet(leftPath);
         var (sourceProperty, targetProperty) = rightNavigationProperty.GetRelationProperties();
         this.MainQuery.LeftJoin((rightNavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!.Table + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
         return leftPath;
@@ -27,7 +48,7 @@ public partial class CompilerContext
 
     public void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
     {
-        var p = ((ICompilerContext)this).Aliases.AddOrGet(edmPath);
+        var p = this.Aliases.AddOrGet(edmPath);
         ActiveQuery.Select($"{p}.{property.columnName} as {customName ?? p + "/" + property.Name}");
     }
 
@@ -35,8 +56,8 @@ public partial class CompilerContext
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(type);
-        var p = ((ICompilerContext)this).Aliases.AddOrGet(path);
-        ((ICompilerContext)this).AddSelect(path, type.GetEntityKey(), $"{p}/:key");
+        var p = this.Aliases.AddOrGet(path);
+        this.AddSelect(path, type.GetEntityKey(), $"{p}/:key");
     }
 
     public void AddSelectAll(EdmPath? path, EdmEntityType? type)
@@ -45,19 +66,19 @@ public partial class CompilerContext
         ArgumentNullException.ThrowIfNull(type);
         foreach (var property in type.DeclaredStructuralProperties())
         {
-            ((ICompilerContext)this).AddSelect(path, (EdmStructuralProperty)property);
+            this.AddSelect(path, (EdmStructuralProperty)property);
         }
     }
 
     public void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty)
     {
-        var p = ((ICompilerContext)this).Aliases.AddOrGet(edmPath);
+        var p = this.Aliases.AddOrGet(edmPath);
         ActiveQuery.AsCount(new string[] { $"{p}.{edmStructuralProperty.columnName}" });
     }
 
     public void AddFilter(BinaryFilter filter)
     {
-        var p = ((ICompilerContext)this).Aliases.AddOrGet(filter.PropertyReference.ResourcePath);
+        var p = this.Aliases.AddOrGet(filter.PropertyReference.ResourcePath);
         switch (filter.OperatorKind)
         {
             case BinaryOperatorKind.Or:
@@ -126,7 +147,7 @@ public partial class CompilerContext
 
     public void AddOrderBy(EdmPath edmPath, EdmStructuralProperty property, OrderByDirection direction)
     {
-        var p = ((ICompilerContext)this).Aliases.AddOrGet(edmPath);
+        var p = this.Aliases.AddOrGet(edmPath);
         if (direction == OrderByDirection.Ascending)
         {
 
@@ -137,9 +158,9 @@ public partial class CompilerContext
             ActiveQuery.OrderByDesc($"{p}.{property.columnName}");
         }
     }
-    public void WrapQuery(EdmPath resourcePath)
+    public void WrapQuery(IOdataParserContext parentContext,EdmPath resourcePath)
     {
-        if (scope.Count > 1 || scope.Peek().ScopeType != CompilerScope.ROOT)
+        if (scopes.Count > 1 || scopes.Peek().ScopeType != CompilerScope.ROOT)
         {
             throw new Exception("Cannot wrap query while a sub compiler scope is open or the current scopo is not the root");
         }
@@ -147,11 +168,18 @@ public partial class CompilerContext
         foreach (var property in resourcePath.GetEdmEntityType().DeclaredStructuralProperties())
         {
             var p = (EdmStructuralProperty)property;
-            ((ICompilerContext)this).AddSelect(resourcePath, p, p.columnName);
+            this.AddSelect(resourcePath, p, p.columnName);
         }
-        ICompilerContext tmpctx = service.serviceProvider.GetService<CompilerContextFactory>()!.CreateContext(this._UriRequest, ((ICompilerContext)this).GetOdataRequestPath(), filter, selectExpand, orderBy, pagination, skipToken);
+        ICompilerContext tmpctx = service.serviceProvider.GetService<CompilerContextFactory>()!.CreateContext(parentContext);
         var a = tmpctx.Aliases.AddOrGet(resourcePath);
-        SetMainQuery(((CompilerContext)tmpctx).ActiveQuery.From(this.ActiveQuery, a), tmpctx.Aliases);
+        SetMainQuery((tmpctx.ActiveScope.Query is null ? throw new ArgumentNullException("tmpctx.ActiveScope.Query") : tmpctx.ActiveScope.Query).From(this.ActiveQuery, a), tmpctx.Aliases);
+    }
+
+
+    private void SetMainQuery(IQueryBuilder query, AliasStore? aliasStore = null)
+    {
+        scopes.Clear();
+        scopes.Push(new CompilerScope(CompilerScope.ROOT, query, aliasStore));
     }
 
     public void AddLimit(long top)

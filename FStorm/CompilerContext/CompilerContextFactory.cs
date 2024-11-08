@@ -35,6 +35,11 @@ public class CompilerContextFactory
         string skipToken) => 
         new CompilerContext(service, UriRequest, oDataPath, filter, selectExpand,orderBy, pagination, skipToken);
 
+    internal ICompilerContext CreateContext(IOdataParserContext context) 
+    {
+        return CreateContext(context.UriRequest, context.GetOdataRequestPath(), context.GetFilterClause(), context.GetSelectAndExpand(), context.GetOrderByClause(),context.GetPaginationClause(), context.GetSkipToken());
+    }
+
     internal ICompilerContext CreateExpansionContext(ODataPath oDataPath, FilterClause filter, SelectExpandClause selectExpand, OrderByClause orderBy, PaginationClause pagination) =>
         new ExpansionCompilerContext(service, oDataPath, filter, selectExpand,orderBy, pagination);
 }

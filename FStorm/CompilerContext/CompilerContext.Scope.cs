@@ -2,11 +2,10 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData.Edm;
-using Microsoft.OData.UriParser;
 
 namespace FStorm;
 
-public partial class CompilerContext
+public partial class QueryBuilderContext
 {
     /// <summary>
     /// Stack tracking various types of <see cref="CompilerScope"/> during the semantic parsing done by <see cref="SemanticVisitor"/>.
@@ -14,34 +13,36 @@ public partial class CompilerContext
     /// <remarks>
     /// Each scope may contains various information about variables, subquery, boolean operations, lambdas etc..
     /// </remarks>
-    private Stack<CompilerScope> scope = new Stack<CompilerScope>();
+    private Stack<CompilerScope> scopes = new Stack<CompilerScope>();
+
+    public void Push(CompilerScope scope) => this.scopes.Push(scope);
+
+    public  CompilerScope Pop() => scopes.Pop();
 
     /// <summary>
     /// Return the first "meaningfull" scope of the stack. This could be anything and do not rely on it to access any from/join clasue.
     /// </summary>
-    private CompilerScope ActiveScope { get => scope.First(x => x.ScopeType != CompilerScope.NO_SCOPE); }
+    public CompilerScope ActiveScope { get => scopes.First(x => x.ScopeType != CompilerScope.NO_SCOPE); }
 
     /// <summary>
     /// Return the first "query builder" scope containing a from clasue. This may be the ROOT or a suquery actually processing.
     /// </summary>
-    private CompilerScope MainScope { get => scope.First(x => x.ScopeType == CompilerScope.ROOT || x.ScopeType == CompilerScope.ANY || x.ScopeType == CompilerScope.ALL); }
+    private CompilerScope MainScope { get => scopes.First(x => x.ScopeType == CompilerScope.ROOT || x.ScopeType == CompilerScope.ANY || x.ScopeType == CompilerScope.ALL); }
 
     /// <summary>
     /// Return the first MAIN 
     /// </summary>
-    private CompilerScope RootScope { get => scope.First(x => x.ScopeType == CompilerScope.ROOT); }
+    private CompilerScope RootScope { get => scopes.First(x => x.ScopeType == CompilerScope.ROOT); }
 
     /// <summary>
     /// Shortcut to access the underlyng query builder of the <see cref="MainScope"/>.
     /// </summary>
-    private IQueryBuilder MainQuery { get => MainScope.Query; }
+    private IQueryBuilder MainQuery { get => MainScope.Query is null ? throw new ArgumentNullException("MainScope.Query") : MainScope.Query; }
 
     /// <summary>
     /// Shortcut to access the underlyng query builder of the <see cref="ActiveScope"/>.
     /// </summary>
-    private IQueryBuilder ActiveQuery { get => ActiveScope.Query; }
-
-    private IQueryBuilder RootQuery { get => RootScope.Query; }
+    private IQueryBuilder ActiveQuery { get => ActiveScope.Query is null ? throw new ArgumentNullException("ActiveScope.Query") : ActiveScope.Query; }
 
     /// <summary>
     /// Open an "AND" scope. While in that the where clauses are in AND relation each others 
@@ -50,11 +51,11 @@ public partial class CompilerContext
     {
         if (ActiveScope.ScopeType != CompilerScope.AND)
         {
-            scope.Push(new CompilerScope(CompilerScope.AND, service.serviceProvider.GetService<IQueryBuilder>()!));
+            scopes.Push(new CompilerScope(CompilerScope.AND, service.serviceProvider.GetService<IQueryBuilder>()!));
         }
         else
         {
-            scope.Push(new CompilerScope(CompilerScope.NO_SCOPE, ActiveQuery));
+            scopes.Push(new CompilerScope(CompilerScope.NO_SCOPE, ActiveQuery));
         }
     }
 
@@ -63,14 +64,14 @@ public partial class CompilerContext
     /// </summary>
     public void CloseAndScope()
     {
-        if (scope.Peek().ScopeType == CompilerScope.AND)
+        if (scopes.Peek().ScopeType == CompilerScope.AND)
         {
-            var s = scope.Pop();
-            (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(_q => s.Query);
+            var s = scopes.Pop();
+            (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(_q => s.Query is null ? throw new ArgumentNullException("Query") : s.Query);
         }
         else
         {
-            scope.Pop();
+            scopes.Pop();
         }
     }
 
@@ -81,11 +82,11 @@ public partial class CompilerContext
     {
         if (ActiveScope.ScopeType != CompilerScope.OR)
         {
-            scope.Push(new CompilerScope(CompilerScope.OR, service.serviceProvider.GetService<IQueryBuilder>()!));
+            scopes.Push(new CompilerScope(CompilerScope.OR, service.serviceProvider.GetService<IQueryBuilder>()!));
         }
         else
         {
-            scope.Push(new CompilerScope(CompilerScope.NO_SCOPE, ActiveQuery));
+            scopes.Push(new CompilerScope(CompilerScope.NO_SCOPE, ActiveQuery));
         }
     }
 
@@ -94,14 +95,14 @@ public partial class CompilerContext
     /// </summary>
     public void CloseOrScope()
     {
-        if (scope.Peek().ScopeType == CompilerScope.OR)
+        if (scopes.Peek().ScopeType == CompilerScope.OR)
         {
-            var s = scope.Pop();
-            (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(_q => s.Query);
+            var s = scopes.Pop();
+            (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(_q => s.Query is null ? throw new ArgumentNullException("Query") : s.Query);
         }
         else
         {
-            scope.Pop();
+            scopes.Pop();
         }
     }
 
@@ -110,7 +111,7 @@ public partial class CompilerContext
     /// </summary>
     public void OpenNotScope()
     {
-        scope.Push(new CompilerScope(CompilerScope.NOT, service.serviceProvider.GetService<IQueryBuilder>()!));
+        scopes.Push(new CompilerScope(CompilerScope.NOT, service.serviceProvider.GetService<IQueryBuilder>()!));
     }
 
     /// <summary>
@@ -118,8 +119,8 @@ public partial class CompilerContext
     /// </summary>
     public void CloseNotScope()
     {
-        var s = scope.Pop();
-        (IsOr ? ActiveQuery.Or() : ActiveQuery).Not().Where(_q => s.Query);
+        var s = scopes.Pop();
+        (IsOr ? ActiveQuery.Or() : ActiveQuery).Not().Where(_q => s.Query is null ? throw new ArgumentNullException("Query") : s.Query);
     }
 
 
@@ -130,7 +131,7 @@ public partial class CompilerContext
     public void OpenVariableScope(Variable variable)
     {
         var s = new CompilerScope(CompilerScope.VARIABLE, ActiveQuery, variable);
-        scope.Push(s);
+        scopes.Push(s);
     }
 
     /// <summary>
@@ -139,10 +140,18 @@ public partial class CompilerContext
     /// <exception cref="ApplicationException"></exception>
     public void CloseVariableScope()
     {
-        var s = scope.Pop();
+        var s = scopes.Pop();
         if (s.ScopeType != CompilerScope.VARIABLE)
             throw new ApplicationException("Should not pass here!!");
     }
+
+    public List<Variable> GetVariablesInScope() => scopes.Where(x => x.ScopeType == CompilerScope.VARIABLE)
+            .Select(x => x.Variable)
+            .Where(x => x != null)
+            .Cast<Variable>()
+            .ToList();
+
+    public Variable? GetCurrentVariableInScope() => scopes.FirstOrDefault(x => x.ScopeType == CompilerScope.VARIABLE)?.Variable;
 
     /// <summary>
     /// Open a scope where handling the ANY operator. This open a sub-query where all operations are perfomed until the scope is closed.
@@ -151,14 +160,14 @@ public partial class CompilerContext
     {
         var anyQ = service.serviceProvider.GetService<IQueryBuilder>()!;
         var s = new CompilerScope(CompilerScope.ANY, anyQ, new AliasStore("ANY"));
-        scope.Push(s);
-        Variable _it = ((ICompilerContext)this).GetVariablesInScope().First(x => x.Name == "$it");
+        scopes.Push(s);
+        Variable _it = this.GetVariablesInScope().First(x => x.Name == "$it");
         var subQueryRoot = CreateSubQuery(_it);
 
         if (subQueryRoot.Item2 is EdmNavigationProperty navigationProperty)
         {
             var (sourceProperty, targetProperty) = navigationProperty.GetRelationProperties();
-            var alias_var = ((ICompilerContext)this).Aliases.AddOrGet(subQueryRoot.Item1);
+            var alias_var = this.Aliases.AddOrGet(subQueryRoot.Item1);
             var alias_it = RootScope.Aliases.AddOrGet(_it.ResourcePath);
             ActiveQuery.WhereColumns($"{alias_var}.{targetProperty.columnName}", "=", $"{alias_it}.{sourceProperty.columnName}");
         }
@@ -174,9 +183,9 @@ public partial class CompilerContext
     /// <exception cref="ApplicationException"></exception>
     public void CloseAnyScope()
     {
-        var s = scope.Pop();
+        var s = scopes.Pop();
         if (s.ScopeType != CompilerScope.ANY) throw new ApplicationException("Should not pass here!!");
-        (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereExists(s.Query);
+        (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereExists(s.Query is null ? throw new ArgumentNullException("Query") : s.Query);
     }
 
 
@@ -187,14 +196,14 @@ public partial class CompilerContext
     {
         var anyQ = service.serviceProvider.GetService<IQueryBuilder>()!;
         var s = new CompilerScope(CompilerScope.ALL, anyQ, new AliasStore("ALL"));
-        scope.Push(s);
-        Variable _it = ((ICompilerContext)this).GetVariablesInScope().First(x => x.Name == "$it");
+        scopes.Push(s);
+        Variable _it = this.GetVariablesInScope().First(x => x.Name == "$it");
         var subQueryRoot = CreateSubQuery(_it);
 
         if (subQueryRoot.Item2 is EdmNavigationProperty navigationProperty)
         {
             var (sourceProperty, targetProperty) = navigationProperty.GetRelationProperties();
-            var alias_var = ((ICompilerContext)this).Aliases.AddOrGet(subQueryRoot.Item1);
+            var alias_var = this.Aliases.AddOrGet(subQueryRoot.Item1);
             var alias_it = RootScope.Aliases.AddOrGet(_it.ResourcePath);
             ActiveQuery.WhereColumns($"{alias_var}.{targetProperty.columnName}", "=", $"{alias_it}.{sourceProperty.columnName}");
         }
@@ -210,36 +219,38 @@ public partial class CompilerContext
     /// <exception cref="ApplicationException"></exception>
     public void CloseAllScope()
     {
-        var s = scope.Pop();
+        var s = scopes.Pop();
         if (s.ScopeType != CompilerScope.ALL) throw new ApplicationException("Should not pass here!!");
-        (IsOr ? ActiveQuery.Or() : ActiveQuery).Not().WhereExists(s.Query);
+        (IsOr ? ActiveQuery.Or() : ActiveQuery).Not().WhereExists(s.Query is null ? throw new ArgumentNullException("Query") : s.Query);
     }
 
-    public ICompilerContext OpenExpansionScope(ExpandedNavigationSelectItem i)
+    private (EdmPath, IEdmElement) CreateSubQuery(Variable _it)
     {
-        ICompilerContext expansionContext = service.serviceProvider.GetService<CompilerContextFactory>()!
-            .CreateExpansionContext(i.PathToNavigationProperty, i.FilterOption, i.SelectAndExpand, i.OrderByOption, new PaginationClause(i.TopOption, i.SkipOption));
-        expansionContext.SetOutputPath(((ICompilerContext)this).GetOutputPath()! + i.PathToNavigationProperty.FirstSegment.Identifier);
-        var s = new CompilerScope(CompilerScope.EXPAND, null);
-        scope.Push(s);
-        return expansionContext;
-    }
+        var _var = this.GetCurrentVariableInScope()!;
+        var _varElements = _var.ResourcePath.AsEdmElements();
+        var _tail = _var.ResourcePath - _it.ResourcePath;
+        /*
+            ~/t_0/t_1/t_2/t_3/t_4/t_5/t_6
+            |------------var-------------|
+            |--$it---|
+                        |-------tail--------|
+        */
 
-    public void CloseExpansionScope(ICompilerContext expansionContext, ExpandedNavigationSelectItem i)
-    {
+        for (int i = _it.ResourcePath.Count(); i < _varElements.Count(); i++)
+        {
+            if (i == _it.ResourcePath.Count())
+            {
+                EdmNavigationProperty type = (EdmNavigationProperty)_varElements[i].Item2;
+                this.AddFrom((EdmEntityType)type.Type.Definition.AsElementType(), _varElements[i].Item1);
+            }
+            else
+            {
+                EdmNavigationProperty type = (EdmNavigationProperty)_varElements[i].Item2;
+                this.AddJoin(type, _varElements[i].Item1 - 1, _varElements[i].Item1);
+            }
+        }
 
-        var s = scope.Pop();
-        if (s.ScopeType != CompilerScope.EXPAND || expansionContext is not ExpansionCompilerContext) throw new ApplicationException("Should not pass here!!");
-
-        var name = expansionContext.GetOutputPath()!.ToString().Replace("~", "$expand");
-        var (sourceProperty, targetProperty) = (((NavigationPropertySegment)i.PathToNavigationProperty.FirstSegment).NavigationProperty as EdmNavigationProperty)!.GetRelationProperties();
-
-        // ensure select
-        string localKeyAlias = name + "/:fkey";
-        ((ICompilerContext)this).AddSelect(((ICompilerContext)this).GetOutputPath()!, sourceProperty, localKeyAlias);
-        string foreignKeyAlias = name + "/:fkey";
-        expansionContext.AddSelect(expansionContext.GetOutputPath()!, targetProperty, foreignKeyAlias);
-        subcontextes.Add(name, expansionContext);
+        return _varElements[_it.ResourcePath.Count()];
     }
 }
 

@@ -30,7 +30,6 @@ namespace FStorm.Test
             connection.Open();
             var services = new ServiceCollection();
             services.AddFStorm(
-                MockModel.PrepareModel(),
                 new ODataOptions()
                 {
                     SQLCompilerType = SQLCompilerType.SQLLite,
@@ -38,6 +37,7 @@ namespace FStorm.Test
                 }
             );
             serviceProvider = services.BuildServiceProvider();
+            MockModel.PrepareModel(serviceProvider.GetService<ODataService>()!.CreateNewModel());
         }
 
         [Test]

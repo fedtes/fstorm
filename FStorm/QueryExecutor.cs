@@ -110,8 +110,9 @@ namespace FStorm
             }
         }
 
-        object? EnsureType(ICompilerContext context, string s, object o)
+        object? EnsureType(ICompilerContext context, string s, object? o)
         {
+            if (o is null) return null;
             if (context.GetOutputKind() == OutputKind.RawValue)
                 return o;
             var s1 = s.Split("/");

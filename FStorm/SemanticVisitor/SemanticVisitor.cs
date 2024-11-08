@@ -140,7 +140,7 @@ public class SemanticVisitor
     protected EdmPath VisitFilterSegment(ICompilerContext context, FilterSegment filterSegment, EdmPath currentPath)
     {
         
-        context.WrapQuery(currentPath);
+        context.WrapQuery(context, currentPath);
         var _it = new Variable() 
         {
             Name = filterSegment.RangeVariable.Name,

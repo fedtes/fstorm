@@ -18,8 +18,9 @@ namespace FStorm.Test
         public void Setup()
         {
             var services = new ServiceCollection();
-            services.AddFStorm(MockModel.PrepareModel(), new ODataOptions() { SQLCompilerType= SQLCompilerType.MSSQL , ServiceRoot= "https://my.service/odata/"});
+            services.AddFStorm(new ODataOptions() { SQLCompilerType= SQLCompilerType.MSSQL , ServiceRoot= "https://my.service/odata/"});
             serviceProvider = services.BuildServiceProvider();
+            MockModel.PrepareModel(serviceProvider.GetService<ODataService>()!.CreateNewModel());
         }
 
 

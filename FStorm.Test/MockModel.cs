@@ -7,9 +7,8 @@ namespace FStorm.Test
 {
     public class MockModel
     {
-        public static EdmModel PrepareModel()
+        public static EdmModel PrepareModel(EdmModel edm)
         {
-            EdmModel edm = new EdmModel();
 
             // Customer
             EdmEntityType customerType = edm.AddEntityType("my", "Customer", "TABCustomers");
