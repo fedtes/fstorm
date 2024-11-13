@@ -31,7 +31,7 @@ namespace FStorm
                 
                 var foreignKey = sc.Key+"/:fkey";
                 SQLCompiledQuery cq = q.From(sc.Value.GetQuery(), "E")
-                    .WhereIn(foreignKey, result.Select(x => x[foreignKey]).ToArray())
+                    .WhereIn("E", foreignKey, result.Select(x => x[foreignKey]).ToArray())
                     .Compile();
 
                 var r = await InnerExecute(command, sc.Value, cq);

@@ -48,7 +48,7 @@ public partial class QueryBuilderContext : IQueryBuilderContext
 
         if (!plugins.Any()) 
         {
-            MainQuery.From(_table + " as " + _alias.ToString());
+            MainQuery.From(_table, _alias.ToString());
         }
         else 
         {
@@ -65,7 +65,7 @@ public partial class QueryBuilderContext : IQueryBuilderContext
 
             if (_EntityAccessContext.Kind == IEntityAccessContext.TABLE_STRING) 
             {
-                this.MainQuery.From(_EntityAccessContext.GetTableString() + " as " + _alias.ToString());
+                this.MainQuery.From(_EntityAccessContext.GetTableString(), _alias.ToString());
             }
             else 
             {
@@ -88,7 +88,7 @@ public partial class QueryBuilderContext : IQueryBuilderContext
 
         if (!plugins.Any()) 
         {
-            this.MainQuery.LeftJoin(leftTable + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+            this.MainQuery.LeftJoin(leftTable, l, l, $"{targetProperty.columnName}", r, $"{sourceProperty.columnName}");
         }
         else 
         {
@@ -111,22 +111,22 @@ public partial class QueryBuilderContext : IQueryBuilderContext
             {
                 if (_OnPropertyNavigationContext.CustomizedJoin)
                 {
-                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.AccessContext.GetTableString() + " as " + l, _OnPropertyNavigationContext.GetJoinCondition());
+                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.AccessContext.GetTableString(), l, _OnPropertyNavigationContext.GetJoinCondition());
                 }
                 else 
                 {
-                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.AccessContext.GetTableString() + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.AccessContext.GetTableString(), l, l, $"{targetProperty.columnName}", r, $"{sourceProperty.columnName}");
                 }
             }
             else 
             {
                 if (_OnPropertyNavigationContext.CustomizedJoin)
                 {
-                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.GetNestedQuery(), _OnPropertyNavigationContext.GetJoinCondition());
+                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.GetNestedQuery(),l , _OnPropertyNavigationContext.GetJoinCondition());
                 }
                 else 
                 {
-                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.GetNestedQuery(), $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.GetNestedQuery(),l , l, $"{targetProperty.columnName}", r, $"{sourceProperty.columnName}");
                 }
             }
         }
@@ -138,7 +138,7 @@ public partial class QueryBuilderContext : IQueryBuilderContext
     {
         var a = this.Aliases.AddOrGet(edmPath);
         var p = (EdmStructuralProperty)property;
-        ActiveQuery.Select($"{a}.{p.columnName} as {customName ?? a + "/" + p.Name}");
+        ActiveQuery.Select((a,p.columnName, customName ?? a + "/" + p.Name));
     }
 
     public void AddSelectKey(EdmPath? path, IEdmEntityType? type)
@@ -163,7 +163,7 @@ public partial class QueryBuilderContext : IQueryBuilderContext
     {
         var a = this.Aliases.AddOrGet(edmPath);
         var p =  (EdmStructuralProperty)edmStructuralProperty;
-        ActiveQuery.AsCount(new string[] { $"{a}.{p.columnName}" });
+        ActiveQuery.AsCount((a, p.columnName));
     }
 
     public void AddFilter(BinaryFilter filter)
@@ -176,11 +176,11 @@ public partial class QueryBuilderContext : IQueryBuilderContext
 
                 if (filter.Value is null)
                 {
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNull($"{a}.{p.columnName}");
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNull(a, p.columnName);
                 }
                 else
                 {
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", "=", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(a, p.columnName, "=", filter.Value);
                 }
                 break;
 
@@ -188,36 +188,36 @@ public partial class QueryBuilderContext : IQueryBuilderContext
 
                 if (filter.Value is null)
                 {
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNotNull($"{a}.{p.columnName}");
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNotNull(a, p.columnName);
                 }
                 else
                 {
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", "<>", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(a, p.columnName, "<>", filter.Value);
                 }
                 break;
 
             case FilterOperatorKind.GreaterThan:
 
                 ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", ">", filter.Value);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(a, p.columnName, ">", filter.Value);
                 break;
 
             case FilterOperatorKind.GreaterThanOrEqual:
 
                 ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", ">=", filter.Value);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(a, p.columnName, ">=", filter.Value);
                 break;
 
             case FilterOperatorKind.LessThan:
 
                 ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", "<", filter.Value);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(a, p.columnName, "<", filter.Value);
                 break;
 
             case FilterOperatorKind.LessThanOrEqual:
 
                 ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", "<=", filter.Value);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where(a, p.columnName, "<=", filter.Value);
                 break;
 
             case FilterOperatorKind.Has:
@@ -225,17 +225,17 @@ public partial class QueryBuilderContext : IQueryBuilderContext
 
             case FilterOperatorKind.StartsWith: //startswith
 
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{a}.{p.columnName}", $"{filter.Value}%", true);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike(a, p.columnName, $"{filter.Value}%", true);
                 break;
 
             case FilterOperatorKind.EndsWith: //endswith
 
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{a}.{p.columnName}", $"%{filter.Value}", true);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike(a, p.columnName, $"%{filter.Value}", true);
                 break;
 
             case FilterOperatorKind.Contains: //contains
 
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{a}.{p.columnName}", $"%{filter.Value}%", true);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike(a, p.columnName, $"%{filter.Value}%", true);
                 break;
         }
     }
@@ -246,12 +246,11 @@ public partial class QueryBuilderContext : IQueryBuilderContext
         var p =  (EdmStructuralProperty)property;
         if (direction == OrderByDirection.Ascending)
         {
-
-            ActiveQuery.OrderBy($"{a}.{p.columnName}");
+            ActiveQuery.OrderBy((a, p.columnName));
         }
         else
         {
-            ActiveQuery.OrderByDesc($"{a}.{p.columnName}");
+            ActiveQuery.OrderByDesc((a, p.columnName));
         }
     }
     public void WrapQuery(IOdataParserContext parentContext,EdmPath resourcePath)
@@ -311,6 +310,6 @@ public class NoPluginQueryBuilderContext : QueryBuilderContext
     {
         var a = this.Aliases.AddOrGet(edmPath);
         var p = (EdmStructuralProperty)property;
-        ActiveQuery.Select($"{a}.{p.columnName}{(!String.IsNullOrEmpty(customName) ? "as " + customName : "" )}");
+        ActiveQuery.Select((a, p.columnName, !String.IsNullOrEmpty(customName) ? customName : "" ));
     }
 }

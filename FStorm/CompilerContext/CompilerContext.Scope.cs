@@ -169,7 +169,7 @@ public partial class QueryBuilderContext
             var (sourceProperty, targetProperty) = navigationProperty.GetRelationProperties();
             var alias_var = this.Aliases.AddOrGet(subQueryRoot.Item1);
             var alias_it = RootScope.Aliases.AddOrGet(_it.ResourcePath);
-            ActiveQuery.WhereColumns($"{alias_var}.{targetProperty.columnName}", "=", $"{alias_it}.{sourceProperty.columnName}");
+            ActiveQuery.WhereColumns(alias_var, targetProperty.columnName, "=", alias_it, sourceProperty.columnName);
         }
         else
         {
@@ -205,7 +205,7 @@ public partial class QueryBuilderContext
             var (sourceProperty, targetProperty) = navigationProperty.GetRelationProperties();
             var alias_var = this.Aliases.AddOrGet(subQueryRoot.Item1);
             var alias_it = RootScope.Aliases.AddOrGet(_it.ResourcePath);
-            ActiveQuery.WhereColumns($"{alias_var}.{targetProperty.columnName}", "=", $"{alias_it}.{sourceProperty.columnName}");
+            ActiveQuery.WhereColumns(alias_var,targetProperty.columnName, "=", alias_it,sourceProperty.columnName);
         }
         else
         {

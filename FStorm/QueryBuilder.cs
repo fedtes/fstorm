@@ -18,15 +18,15 @@ public class SQLKataQueryBuilder : IQueryBuilder
         this._query = query;
     }
 
-    public IQueryBuilder AsCount(params string[] columns)
+    public IQueryBuilder AsCount(params (string alias, string column)[] columns)
     {
-        _query.AsCount(columns);
+        _query.AsCount(columns.Select(x => $"{x.alias}.{x.column}").ToArray());
         return this;
     }
 
-    public IQueryBuilder From(string table)
+    public IQueryBuilder From(string table, string alias)
     {
-        _query.From(table);
+        _query.From($"{table} as {alias}");
         return this;
     }
     
@@ -36,33 +36,33 @@ public class SQLKataQueryBuilder : IQueryBuilder
         return this;
     }
 
-    public IQueryBuilder Join(string table, string first, string second)
+    public IQueryBuilder Join(string table, string alias, string alias_1, string first, string alias_2, string second)
     {
-        _query.Join(table, first,second);
+        _query.Join($"{table} as {alias}", $"{alias_1}.{first}", $"{alias_2}.{second}");
         return this;
     }
 
-    public IQueryBuilder LeftJoin(string table, string first, string second)
+    public IQueryBuilder LeftJoin(string table, string alias, string alias_1, string first, string alias_2, string second)
     {
-        _query.LeftJoin(table,first,second);
+        _query.LeftJoin($"{table} as {alias}", $"{alias_1}.{first}", $"{alias_2}.{second}");
         return this;
     }
 
-    public IQueryBuilder LeftJoin(IQueryBuilder table, Func<IJoinCondition, IJoinCondition> joinCondition)
+    public IQueryBuilder LeftJoin(IQueryBuilder table, string alias, Func<IJoinCondition, IJoinCondition> joinCondition)
     {
-        _query.LeftJoin(((SQLKataQueryBuilder)table)._query, (j) => ((SQLKataJoinCondition)joinCondition(new SQLKataJoinCondition(j))).Join);
+        _query.LeftJoin(((SQLKataQueryBuilder)table)._query.As(alias), (j) => ((SQLKataJoinCondition)joinCondition(new SQLKataJoinCondition(j))).Join);
         return this;
     }
 
-    public IQueryBuilder LeftJoin(string table, Func<IJoinCondition, IJoinCondition> joinCondition)
+    public IQueryBuilder LeftJoin(string table, string alias, Func<IJoinCondition, IJoinCondition> joinCondition)
     {
-        _query.LeftJoin(table, (j) => ((SQLKataJoinCondition)joinCondition(new SQLKataJoinCondition(j))).Join);
+        _query.LeftJoin($"{table} as {alias}", (j) => ((SQLKataJoinCondition)joinCondition(new SQLKataJoinCondition(j))).Join);
         return this;
     }
 
-    public IQueryBuilder LeftJoin(IQueryBuilder table, string first, string second)
+    public IQueryBuilder LeftJoin(IQueryBuilder table, string alias, string alias_1, string first, string alias_2, string second)
     {
-        _query.LeftJoin(((SQLKataQueryBuilder)table)._query, j => j.Where(first, second));
+        _query.LeftJoin(((SQLKataQueryBuilder)table)._query.As(alias), j => j.WhereColumns( $"{alias_1}.{first}", "=", $"{alias_2}.{second}"));
         return this;
     }
 
@@ -78,15 +78,15 @@ public class SQLKataQueryBuilder : IQueryBuilder
         return this;
     }
 
-    public IQueryBuilder OrderBy(params string[] columns)
+    public IQueryBuilder OrderBy(params (string alias, string column)[] columns)
     {
-        _query.OrderBy(columns);
+        _query.OrderBy(columns.Select(x => $"{x.alias}.{x.column}").ToArray());
         return this;
     }
 
-    public IQueryBuilder OrderByDesc(params string[] columns)
+    public IQueryBuilder OrderByDesc(params (string alias, string column)[] columns)
     {
-        _query.OrderByDesc(columns);
+        _query.OrderByDesc(columns.Select(x => $"{x.alias}.{x.column}").ToArray());
         return this;
     }
 
@@ -102,15 +102,15 @@ public class SQLKataQueryBuilder : IQueryBuilder
         return this;
     }
 
-    public IQueryBuilder Select(params string[] columns)
+    public IQueryBuilder Select(params (string alias, string column, string? as_alias)[] columns)
     {
-        _query.Select(columns);
+        _query.Select(columns.Select(x => $"{x.alias}.{x.column}{(string.IsNullOrEmpty(x.as_alias)? "": " as " + x.as_alias)}").ToArray());
         return this;
     }
 
-    public IQueryBuilder Where(string column, string op, object value)
+    public IQueryBuilder Where(string alias, string column, string op, object value)
     {
-        _query.Where(column, op, value);
+        _query.Where($"{alias}.{column}", op, value);
         return this;
     }
 
@@ -120,9 +120,9 @@ public class SQLKataQueryBuilder : IQueryBuilder
         return this;
     }
 
-    public IQueryBuilder WhereColumns(string first, string op, string second)
+    public IQueryBuilder WhereColumns(string alias_1, string first, string op, string alias_2, string second)
     {
-        _query.WhereColumns(first,op, second);
+        _query.WhereColumns($"{alias_1}.{first}", op, $"{alias_2}.{second}");
         return this;
     }
 
@@ -132,21 +132,21 @@ public class SQLKataQueryBuilder : IQueryBuilder
         return this;
     }
 
-    public IQueryBuilder WhereLike(string column, string value, bool caseSensitive)
+    public IQueryBuilder WhereLike(string alias, string column, string value, bool caseSensitive)
     {
-        _query.WhereLike(column, value,caseSensitive);
+        _query.WhereLike($"{alias}.{column}", value, caseSensitive);
         return this;
     }
 
-    public IQueryBuilder WhereNull(string column)
+    public IQueryBuilder WhereNull(string alias, string column)
     {
-        _query.WhereNull(column);
+        _query.WhereNull($"{alias}.{column}");
         return this;
     }
 
-    public IQueryBuilder WhereNotNull(string column)
+    public IQueryBuilder WhereNotNull(string alias, string column)
     {
-        _query.WhereNotNull(column);
+        _query.WhereNotNull($"{alias}.{column}");
         return this;
     }
 
@@ -162,9 +162,9 @@ public class SQLKataQueryBuilder : IQueryBuilder
         return new SQLCompiledQuery(_compilerOutput.Sql, _compilerOutput.NamedBindings);
     }
 
-    IQueryBuilder IQueryBuilder.WhereIn(string column, object?[] values)
+    IQueryBuilder IQueryBuilder.WhereIn(string alias, string column, object?[] objects)
     {
-        _query.WhereIn(column, values);
+        _query.WhereIn($"{alias}.{column}", objects);
         return this;
     }
 
