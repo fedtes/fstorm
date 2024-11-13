@@ -1,4 +1,5 @@
 ﻿using Microsoft.OData.Edm;
+using Microsoft.OData.UriParser;
 
 namespace FStorm
 {
@@ -25,7 +26,7 @@ namespace FStorm
             };
         }
 
-        public static EdmStructuralProperty GetEntityKey(this EdmEntityType type) => (EdmStructuralProperty)type.DeclaredKey.First();
+        public static EdmStructuralProperty GetEntityKey(this IEdmEntityType type) => (EdmStructuralProperty)type.DeclaredKey.First();
 
         public static IEdmProperty? FindProperty(this EdmEntityType type, string propertyName) {
             if (propertyName==":key")
@@ -76,7 +77,21 @@ namespace FStorm
                 r.Add(item);
             }
             return r;
-        }        
+        }
+
+        public static FilterOperatorKind ConvertOperatorKind(BinaryOperatorKind operatorKind)
+        {
+            return operatorKind switch {
+                BinaryOperatorKind.Equal => FilterOperatorKind.Equal,
+                BinaryOperatorKind.NotEqual => FilterOperatorKind.NotEqual,
+                BinaryOperatorKind.GreaterThan => FilterOperatorKind.GreaterThan,
+                BinaryOperatorKind.GreaterThanOrEqual => FilterOperatorKind.GreaterThanOrEqual,
+                BinaryOperatorKind.LessThan => FilterOperatorKind.LessThan,
+                BinaryOperatorKind.LessThanOrEqual => FilterOperatorKind.LessThanOrEqual,
+                BinaryOperatorKind.Has => throw new NotImplementedException(),
+                _ => throw new ArgumentException("Unsupported operator")
+            };
+        }
 
     }
 }

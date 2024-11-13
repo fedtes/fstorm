@@ -114,7 +114,7 @@ public class SemanticVisitor
                 ResourcePath = pathFactory.CreatePath(keySegment.NavigationSource.Path.PathSegments.ToArray()),
                 Property = k
             },
-            OperatorKind= BinaryOperatorKind.Equal,
+            OperatorKind= FilterOperatorKind.Equal,
             Value = keySegment.Keys.First().Value
         };
         context.AddFilter(filter);
@@ -279,7 +279,7 @@ public class SemanticVisitor
         {
             BinaryFilter filter = new BinaryFilter() {
                 PropertyReference = (PropertyReference)VisitExpression(context, node.Left),
-                OperatorKind = node.OperatorKind,
+                OperatorKind = Helpers.ConvertOperatorKind(node.OperatorKind),
                 Value = (VisitExpression(context, node.Right) as ConstantValue)?.Value
             };
             context.AddFilter(filter);
@@ -374,21 +374,21 @@ public class SemanticVisitor
             case "contains":
                 context.AddFilter(new BinaryFilter() {
                     PropertyReference = (PropertyReference)VisitExpression(context, (SingleValueNode)node.Parameters.First())!,
-                    OperatorKind = (BinaryOperatorKind)16,
+                    OperatorKind = FilterOperatorKind.Contains,
                     Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last())! as ConstantValue)?.Value
                 });
                 break;
             case "endswith":
                 context.AddFilter(new BinaryFilter() {
                     PropertyReference = (PropertyReference)VisitExpression(context, (SingleValueNode)node.Parameters.First())!,
-                    OperatorKind = (BinaryOperatorKind)15,
+                    OperatorKind = FilterOperatorKind.EndsWith,
                     Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last()) as ConstantValue)?.Value
                 });
                 break;
             case "startswith":
                 context.AddFilter(new BinaryFilter() {
                     PropertyReference = (PropertyReference)VisitExpression(context, (SingleValueNode)node.Parameters.First())!,
-                    OperatorKind = (BinaryOperatorKind)14,
+                    OperatorKind = FilterOperatorKind.StartsWith,
                     Value = (VisitExpression(context, (SingleValueNode)node.Parameters.Last()) as ConstantValue)?.Value
                 });
                 break;

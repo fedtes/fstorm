@@ -133,16 +133,16 @@ public interface IQueryBuilderContext
 #endregion
 
 #region "query manipulation"
-    EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath);
+    EdmPath AddFrom(IEdmEntityType edmEntityType, EdmPath edmPath);
 
-    EdmPath AddJoin(EdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath);
-    void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null);
-    void AddSelectKey(EdmPath? path, EdmEntityType? type);
-    void AddSelectAll(EdmPath? path, EdmEntityType? type);
-    void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty);
+    EdmPath AddJoin(IEdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath);
+    void AddSelect(EdmPath edmPath, IEdmStructuralProperty property, string? customName = null);
+    void AddSelectKey(EdmPath? path, IEdmEntityType? type);
+    void AddSelectAll(EdmPath? path, IEdmEntityType? type);
+    void AddCount(EdmPath edmPath, IEdmStructuralProperty property);
     void AddFilter(BinaryFilter filter);
-    void AddOrderBy(EdmPath edmPath, EdmStructuralProperty property,OrderByDirection direction);
-    void WrapQuery(IOdataParserContext context,EdmPath resourcePath);
+    void AddOrderBy(EdmPath edmPath, IEdmStructuralProperty property, OrderByDirection direction);
+    void WrapQuery(IOdataParserContext context, EdmPath resourcePath);
     void AddLimit(long top);
     void AddOffset(long skip);
 #endregion

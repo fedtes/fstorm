@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData.Edm;
 using Microsoft.OData.Edm.Csdl;
 using Microsoft.OData.Edm.Validation;
 using System.Data.Common;
@@ -10,7 +11,7 @@ namespace FStorm
     {
         public static PluginRegistration AddFStorm(this IServiceCollection services, ODataOptions options)
         {
-            services.AddTransient<EdmModel>();
+            services.AddTransient<IEdmModel, EdmModel>();
             services.AddTransient<Connection>();
             services.AddTransient<Transaction>();
             services.AddTransient<Command>();
@@ -18,6 +19,7 @@ namespace FStorm
             services.AddTransient<IQueryBuilder, SQLKataQueryBuilder>();
             services.AddTransient<IQueryExecutor, DBCommandQueryExecutor>();
             services.AddTransient<IEntityAccessContext, EntityAccessContext>();
+            services.AddTransient<IOnPropertyNavigationContext, OnPropertyNavigationContext>();
             services.AddSingleton<EdmPathFactory>();
             services.AddSingleton<SemanticVisitor>();
             services.AddSingleton<CompilerContextFactory>();
@@ -43,6 +45,11 @@ namespace FStorm
         public void AddOnEntityAccess<T>() where T : class, IOnEntityAccess
         {
             services.AddTransient<IOnEntityAccess, T>();
+        }
+
+        public void AddOnPropertyNavigation<T>() where T : class, IOnPropertyNavigation
+        {
+            services.AddTransient<IOnPropertyNavigation, T>();
         }
     }
 
@@ -91,7 +98,7 @@ namespace FStorm
 
         public EdmModel CreateNewModel() 
         {
-            _model = serviceProvider.GetService<EdmModel>()!;
+            _model = (EdmModel)serviceProvider.GetService<IEdmModel>()!;
             return _model;
         }
 

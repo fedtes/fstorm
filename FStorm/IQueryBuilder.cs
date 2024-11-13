@@ -5,6 +5,9 @@ public interface IQueryBuilder
     IQueryBuilder From(string table);
     IQueryBuilder From(IQueryBuilder table, string alias);
     IQueryBuilder LeftJoin(string table, string first, string second);
+    IQueryBuilder LeftJoin(string table, Func<IJoinCondition,IJoinCondition> joinCondition);
+    IQueryBuilder LeftJoin(IQueryBuilder table, Func<IJoinCondition,IJoinCondition> joinCondition);
+    IQueryBuilder LeftJoin(IQueryBuilder table, string first, string second);
     IQueryBuilder Join(string table, string first, string second);
     IQueryBuilder Select(params string[] columns);
     IQueryBuilder AsCount(params string[] columns);
@@ -23,6 +26,12 @@ public interface IQueryBuilder
     IQueryBuilder WhereNull(string v);
     IQueryBuilder WhereNotNull(string v);
     IQueryBuilder WhereIn(string v, object?[] objects);
+}
+
+public interface IJoinCondition
+{
+    IJoinCondition On(string first, string second, string op);
+    IJoinCondition OrOn(string first, string second, string op);
 }
 
 

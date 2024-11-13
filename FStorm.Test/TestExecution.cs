@@ -99,7 +99,9 @@ namespace FStorm.Test
             var con = _FStormService.OpenConnection(connection);
             var r = (await con.Get(req).ToListAsync()).ToArray();
             Assert.That(r[0]["RagSoc"], Is.EqualTo("ACME"));
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
             Assert.That((r[0]["Address"] as IDictionary<string,object?>)["Country"], Is.EqualTo("Indonesia"));
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
         }
 
         [Test]
@@ -113,7 +115,7 @@ namespace FStorm.Test
             var con = _FStormService.OpenConnection(connection);
             var r = (await con.Get(req).ToListAsync()).ToArray();
             Assert.That(r[0]["RagSoc"], Is.EqualTo("ACME"));
-            Assert.That((r[0]["Orders"] as IList).Count, Is.EqualTo(cnt));
+            Assert.That(r[0]["Orders"] as IList, Has.Count.EqualTo(cnt));
         }
 
         [Test]
@@ -125,10 +127,10 @@ namespace FStorm.Test
             var s = (await con.Get(req).ToODataString());
             var r = (await con.Get(req).ToListAsync());
             Assert.That(s, Does.Contain("@odata.nextLink"));
-            Assert.AreEqual(10, r.Count());
+            Assert.That(r.Count(), Is.EqualTo(10));
             var nextLink = new Regex("\"@odata.nextLink\":\"(?'nextlink'[^\"]+)\"").Match(s).Groups["nextlink"].Value;
             var r1 = (await con.Get(nextLink).ToListAsync());
-            Assert.AreEqual(10, r1.Count());
+            Assert.That(r1.Count(), Is.EqualTo(10));
             Assert.That(r1.First()["Number"], Is.EqualTo("132"));
         }
 

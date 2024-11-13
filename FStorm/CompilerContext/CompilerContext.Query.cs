@@ -30,25 +30,31 @@ public partial class QueryBuilderContext : IQueryBuilderContext
     public bool HasFrom() => MainScope.HasFromClause;
     public IQueryBuilder GetQuery() => ActiveQuery;
 
-    internal virtual List<IOnEntityAccess> GetOnEntityAccessPlugins(EdmEntityType edmEntityType) 
+    internal virtual List<IOnEntityAccess> GetOnEntityAccessPlugins(IEdmEntityType edmEntityType) 
     {
         return service.serviceProvider.GetServices<IOnEntityAccess>().Where(x => x.EntityName == edmEntityType.FullName()).ToList();
     }
 
-    public EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath)
+    internal virtual List<IOnPropertyNavigation> GetOnPropertyNavigationPlugins(IEdmNavigationProperty rightNavigationProperty) 
+    {
+        return service.serviceProvider.GetServices<IOnPropertyNavigation>().Where(x => x.EntityName == ((IEdmEntityType)rightNavigationProperty.DeclaringType).FullName() && x.PropertyName == rightNavigationProperty.Name).ToList();
+    }
+
+    public EdmPath AddFrom(IEdmEntityType edmEntityType, EdmPath edmPath)
     {
         var _alias = this.Aliases.AddOrGet(edmPath);
         var plugins = GetOnEntityAccessPlugins(edmEntityType);
+        var _table = ((EdmEntityType)edmEntityType).Table;
 
         if (!plugins.Any()) 
         {
-            MainQuery.From(edmEntityType.Table + " as " + _alias.ToString());
+            MainQuery.From(_table + " as " + _alias.ToString());
         }
         else 
         {
             EntityAccessContext _EntityAccessContext =(EntityAccessContext)service.serviceProvider.GetService<IEntityAccessContext>()!;
             _EntityAccessContext.Kind = IEntityAccessContext.TABLE_STRING;
-            _EntityAccessContext.InitialTableString = edmEntityType.Table;
+            _EntityAccessContext.InitialTableString = _table;
             _EntityAccessContext.Alias = _alias;
             _EntityAccessContext.Me = new Variable() { Name= "$me", ResourcePath = edmPath, Type = edmEntityType};
         
@@ -70,23 +76,72 @@ public partial class QueryBuilderContext : IQueryBuilderContext
         return edmPath;
     }
 
-    public EdmPath AddJoin(EdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath)
+    public EdmPath AddJoin(IEdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath)
     {
         if (this.Aliases.Contains(leftPath)) return leftPath;
         var r = this.Aliases.AddOrGet(rightPath);
         var l = this.Aliases.AddOrGet(leftPath);
-        var (sourceProperty, targetProperty) = rightNavigationProperty.GetRelationProperties();
-        this.MainQuery.LeftJoin((rightNavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!.Table + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+        var (sourceProperty, targetProperty) = ((EdmNavigationProperty)rightNavigationProperty).GetRelationProperties();
+        var plugins = GetOnPropertyNavigationPlugins(rightNavigationProperty);
+        var leftType = (rightNavigationProperty.Type.Definition.AsElementType() as EdmEntityType)!;
+        var leftTable = leftType.Table;
+
+        if (!plugins.Any()) 
+        {
+            this.MainQuery.LeftJoin(leftTable + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+        }
+        else 
+        {
+            OnPropertyNavigationContext _OnPropertyNavigationContext = (OnPropertyNavigationContext)service.serviceProvider.GetService<IOnPropertyNavigationContext>()!;
+            _OnPropertyNavigationContext.RightAlias = r;
+            _OnPropertyNavigationContext.LeftAlias = l;
+            _OnPropertyNavigationContext.Right = new Variable() { Name= "$right", ResourcePath = rightPath, Type = (IEdmEntityType)rightNavigationProperty.DeclaringType };
+            _OnPropertyNavigationContext.Left = new Variable() { Name= "$left", ResourcePath = leftPath, Type = leftType };
+            _OnPropertyNavigationContext._accessContext.Kind = IEntityAccessContext.TABLE_STRING;
+            _OnPropertyNavigationContext._accessContext.InitialTableString = leftTable;
+            _OnPropertyNavigationContext._accessContext.Alias = l;
+            _OnPropertyNavigationContext._accessContext.Me = new Variable() { Name= "$me", ResourcePath = leftPath, Type = leftType };
+
+            foreach (var plugin in plugins)
+            {
+                plugin.OnNavigation(_OnPropertyNavigationContext);
+            }
+
+            if (_OnPropertyNavigationContext.AccessContext.Kind == IEntityAccessContext.TABLE_STRING) 
+            {
+                if (_OnPropertyNavigationContext.CustomizedJoin)
+                {
+                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.AccessContext.GetTableString() + " as " + l, _OnPropertyNavigationContext.GetJoinCondition());
+                }
+                else 
+                {
+                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.AccessContext.GetTableString() + " as " + l, $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+                }
+            }
+            else 
+            {
+                if (_OnPropertyNavigationContext.CustomizedJoin)
+                {
+                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.GetNestedQuery(), _OnPropertyNavigationContext.GetJoinCondition());
+                }
+                else 
+                {
+                    this.MainQuery.LeftJoin(_OnPropertyNavigationContext.GetNestedQuery(), $"{l}.{targetProperty.columnName}", $"{r}.{sourceProperty.columnName}");
+                }
+            }
+        }
+
         return leftPath;
     }
 
-    public virtual void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
+    public virtual void AddSelect(EdmPath edmPath, IEdmStructuralProperty property, string? customName = null)
     {
-        var p = this.Aliases.AddOrGet(edmPath);
-        ActiveQuery.Select($"{p}.{property.columnName} as {customName ?? p + "/" + property.Name}");
+        var a = this.Aliases.AddOrGet(edmPath);
+        var p = (EdmStructuralProperty)property;
+        ActiveQuery.Select($"{a}.{p.columnName} as {customName ?? a + "/" + p.Name}");
     }
 
-    public void AddSelectKey(EdmPath? path, EdmEntityType? type)
+    public void AddSelectKey(EdmPath? path, IEdmEntityType? type)
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(type);
@@ -94,7 +149,7 @@ public partial class QueryBuilderContext : IQueryBuilderContext
         this.AddSelect(path, type.GetEntityKey(), $"{p}/:key");
     }
 
-    public void AddSelectAll(EdmPath? path, EdmEntityType? type)
+    public void AddSelectAll(EdmPath? path, IEdmEntityType? type)
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(type);
@@ -104,92 +159,99 @@ public partial class QueryBuilderContext : IQueryBuilderContext
         }
     }
 
-    public void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty)
+    public void AddCount(EdmPath edmPath, IEdmStructuralProperty edmStructuralProperty)
     {
-        var p = this.Aliases.AddOrGet(edmPath);
-        ActiveQuery.AsCount(new string[] { $"{p}.{edmStructuralProperty.columnName}" });
+        var a = this.Aliases.AddOrGet(edmPath);
+        var p =  (EdmStructuralProperty)edmStructuralProperty;
+        ActiveQuery.AsCount(new string[] { $"{a}.{p.columnName}" });
     }
 
     public void AddFilter(BinaryFilter filter)
     {
-        var p = this.Aliases.AddOrGet(filter.PropertyReference.ResourcePath);
+        var a = this.Aliases.AddOrGet(filter.PropertyReference.ResourcePath);
+        var p = (EdmStructuralProperty)filter.PropertyReference.Property;
         switch (filter.OperatorKind)
         {
-            case BinaryOperatorKind.Or:
-                throw new NotImplementedException("should not pass here!");
-            case BinaryOperatorKind.And:
-                throw new NotImplementedException("should not pass here!");
-            case BinaryOperatorKind.Equal:
+            case FilterOperatorKind.Equal:
+
                 if (filter.Value is null)
                 {
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNull($"{p}.{filter.PropertyReference.Property.columnName}");
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNull($"{a}.{p.columnName}");
                 }
                 else
                 {
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}", "=", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", "=", filter.Value);
                 }
                 break;
-            case BinaryOperatorKind.NotEqual:
+
+            case FilterOperatorKind.NotEqual:
+
                 if (filter.Value is null)
                 {
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNotNull($"{p}.{filter.PropertyReference.Property.columnName}");
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereNotNull($"{a}.{p.columnName}");
                 }
                 else
                 {
-                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}", "<>", filter.Value);
+                    (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", "<>", filter.Value);
                 }
                 break;
-            case BinaryOperatorKind.GreaterThan:
+
+            case FilterOperatorKind.GreaterThan:
+
                 ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}", ">", filter.Value);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", ">", filter.Value);
                 break;
-            case BinaryOperatorKind.GreaterThanOrEqual:
+
+            case FilterOperatorKind.GreaterThanOrEqual:
+
                 ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}", ">=", filter.Value);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", ">=", filter.Value);
                 break;
-            case BinaryOperatorKind.LessThan:
+
+            case FilterOperatorKind.LessThan:
+
                 ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}", "<", filter.Value);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", "<", filter.Value);
                 break;
-            case BinaryOperatorKind.LessThanOrEqual:
+
+            case FilterOperatorKind.LessThanOrEqual:
+
                 ArgumentNullException.ThrowIfNull(filter.Value, nameof(filter.Value));
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{p}.{filter.PropertyReference.Property.columnName}", "<=", filter.Value);
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).Where($"{a}.{p.columnName}", "<=", filter.Value);
                 break;
-            case BinaryOperatorKind.Add:
+
+            case FilterOperatorKind.Has:
                 throw new NotImplementedException();
-            case BinaryOperatorKind.Subtract:
-                throw new NotImplementedException();
-            case BinaryOperatorKind.Multiply:
-                throw new NotImplementedException();
-            case BinaryOperatorKind.Divide:
-                throw new NotImplementedException();
-            case BinaryOperatorKind.Modulo:
-                throw new NotImplementedException();
-            case BinaryOperatorKind.Has:
-                throw new NotImplementedException();
-            case (BinaryOperatorKind)14: //startswith
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{p}.{filter.PropertyReference.Property.columnName}", $"{filter.Value}%", true);
+
+            case FilterOperatorKind.StartsWith: //startswith
+
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{a}.{p.columnName}", $"{filter.Value}%", true);
                 break;
-            case (BinaryOperatorKind)15: //endswith
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{p}.{filter.PropertyReference.Property.columnName}", $"%{filter.Value}", true);
+
+            case FilterOperatorKind.EndsWith: //endswith
+
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{a}.{p.columnName}", $"%{filter.Value}", true);
                 break;
-            case (BinaryOperatorKind)16: //contains
-                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{p}.{filter.PropertyReference.Property.columnName}", $"%{filter.Value}%", true);
+
+            case FilterOperatorKind.Contains: //contains
+
+                (IsOr ? ActiveQuery.Or() : ActiveQuery).WhereLike($"{a}.{p.columnName}", $"%{filter.Value}%", true);
                 break;
         }
     }
 
-    public void AddOrderBy(EdmPath edmPath, EdmStructuralProperty property, OrderByDirection direction)
+    public void AddOrderBy(EdmPath edmPath, IEdmStructuralProperty property, OrderByDirection direction)
     {
-        var p = this.Aliases.AddOrGet(edmPath);
+        var a = this.Aliases.AddOrGet(edmPath);
+        var p =  (EdmStructuralProperty)property;
         if (direction == OrderByDirection.Ascending)
         {
 
-            ActiveQuery.OrderBy($"{p}.{property.columnName}");
+            ActiveQuery.OrderBy($"{a}.{p.columnName}");
         }
         else
         {
-            ActiveQuery.OrderByDesc($"{p}.{property.columnName}");
+            ActiveQuery.OrderByDesc($"{a}.{p.columnName}");
         }
     }
     public void WrapQuery(IOdataParserContext parentContext,EdmPath resourcePath)
@@ -240,14 +302,15 @@ public class NoPluginQueryBuilderContext : QueryBuilderContext
     /// <summary>
     /// Override to prevent fire of plugin from plugin execution to prevent loops. Could be done better by filtering only the current invoked entity.
     /// </summary>
-    internal override List<IOnEntityAccess> GetOnEntityAccessPlugins(EdmEntityType edmEntityType) => new List<IOnEntityAccess>();
+    internal override List<IOnEntityAccess> GetOnEntityAccessPlugins(IEdmEntityType edmEntityType) => new List<IOnEntityAccess>();
 
     /// <summary>
     /// Avoid computing aliases on output columns used in the query. This allow to see the nested query as a "table" by letting the columns name explicitly.
     /// </summary>
-    public override void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null)
+    public override void AddSelect(EdmPath edmPath, IEdmStructuralProperty property, string? customName = null)
     {
-        var p = this.Aliases.AddOrGet(edmPath);
-        ActiveQuery.Select($"{p}.{property.columnName}{(!String.IsNullOrEmpty(customName) ? "as " + customName : "" )}");
+        var a = this.Aliases.AddOrGet(edmPath);
+        var p = (EdmStructuralProperty)property;
+        ActiveQuery.Select($"{a}.{p.columnName}{(!String.IsNullOrEmpty(customName) ? "as " + customName : "" )}");
     }
 }

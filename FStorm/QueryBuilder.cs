@@ -48,6 +48,24 @@ public class SQLKataQueryBuilder : IQueryBuilder
         return this;
     }
 
+    public IQueryBuilder LeftJoin(IQueryBuilder table, Func<IJoinCondition, IJoinCondition> joinCondition)
+    {
+        _query.LeftJoin(((SQLKataQueryBuilder)table)._query, (j) => ((SQLKataJoinCondition)joinCondition(new SQLKataJoinCondition(j))).Join);
+        return this;
+    }
+
+    public IQueryBuilder LeftJoin(string table, Func<IJoinCondition, IJoinCondition> joinCondition)
+    {
+        _query.LeftJoin(table, (j) => ((SQLKataJoinCondition)joinCondition(new SQLKataJoinCondition(j))).Join);
+        return this;
+    }
+
+    public IQueryBuilder LeftJoin(IQueryBuilder table, string first, string second)
+    {
+        _query.LeftJoin(((SQLKataQueryBuilder)table)._query, j => j.Where(first, second));
+        return this;
+    }
+
     public IQueryBuilder Not()
     {
         _query.Not();
@@ -147,6 +165,29 @@ public class SQLKataQueryBuilder : IQueryBuilder
     IQueryBuilder IQueryBuilder.WhereIn(string column, object?[] values)
     {
         _query.WhereIn(column, values);
+        return this;
+    }
+
+
+}
+
+
+public class SQLKataJoinCondition : IJoinCondition
+{
+    public SqlKata.Join Join;
+
+    public SQLKataJoinCondition(SqlKata.Join join) {
+        this.Join = join;
+    }
+    public IJoinCondition On(string first, string second, string op)
+    {
+        Join.On(first, second, op);
+        return this;
+    }
+
+    public IJoinCondition OrOn(string first, string second, string op)
+    {
+        Join.OrOn(first, second, op);
         return this;
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
 namespace FStorm
@@ -33,7 +34,7 @@ namespace FStorm
     /// </summary>
     public class PropertyReference : PathValue
     {
-        public EdmStructuralProperty Property {get; set;} = null!;
+        public IEdmStructuralProperty Property {get; set;} = null!;
     }
 
     /// <summary>
@@ -41,9 +42,17 @@ namespace FStorm
     /// </summary>
     public class Variable : PathValue
     {
-        public Microsoft.OData.Edm.IEdmEntityType Type {get; set;} = null!;
+        public IEdmEntityType Type {get; set;} = null!;
 
         public String Name {get; set;} = null!;
+
+        public PropertyReference GetStructuralProperty(string name) {
+            return new PropertyReference() 
+            {
+                Property = Type.StructuralProperties().First(x => x.Name == name),
+                ResourcePath = ResourcePath
+            };
+        }
     }
 
     /// <summary>
@@ -56,9 +65,79 @@ namespace FStorm
     /// </summary>
     public class BinaryFilter : Filter
     {
+        public BinaryFilter() {}
+        public BinaryFilter(PropertyReference propertyReference, FilterOperatorKind operatorKind, object? value)
+        {
+            PropertyReference = propertyReference;
+            OperatorKind = operatorKind;
+            Value = value;
+        }
         public PropertyReference PropertyReference {get; set;} = null!;
-        public BinaryOperatorKind OperatorKind = BinaryOperatorKind.Equal;
+        public FilterOperatorKind OperatorKind = FilterOperatorKind.Equal;
         public object? Value = null;
+    }
+
+    public class PropertyFilter : Filter
+    {
+        public PropertyFilter() {}
+        public PropertyFilter(PropertyReference propertyReference, FilterOperatorKind operatorKind, PropertyReference rightPropertyReference )
+        {
+            LeftPropertyReference = propertyReference;
+            OperatorKind = operatorKind;
+            RightPropertyReference = rightPropertyReference;
+        }
+        public PropertyReference LeftPropertyReference {get; set;} = null!;
+        public FilterOperatorKind OperatorKind = FilterOperatorKind.Equal;
+        public PropertyReference RightPropertyReference {get; set;} = null!;
+    }
+
+    public enum FilterOperatorKind
+    {
+        /// <summary>
+        /// The eq operator.
+        /// </summary>
+        Equal = 2,
+
+        /// <summary>
+        /// The ne operator.
+        /// </summary>
+        NotEqual = 3,
+
+        /// <summary>
+        /// The gt operator.
+        /// </summary>
+        GreaterThan = 4,
+
+        /// <summary>
+        /// The ge operator.
+        /// </summary>
+        GreaterThanOrEqual = 5,
+
+        /// <summary>
+        /// The lt operator.
+        /// </summary>
+        LessThan = 6,
+
+        /// <summary>
+        /// The le operator.
+        /// </summary>
+        LessThanOrEqual = 7,
+
+        Has=13,
+        /// <summary>
+        /// The startswith operator.
+        /// </summary>
+        StartsWith = 14,
+        /// <summary>
+        /// The endswith operator.
+        /// </summary>
+        EndsWith = 15,
+
+        /// <summary>
+        /// The conatins operator.
+        /// </summary>
+        Contains = 16
+
     }
 
 }

@@ -101,19 +101,19 @@ namespace FStorm
 
         public void CloseAllScope() => queryBuilderContext.CloseAllScope();
 
-        public EdmPath AddFrom(EdmEntityType edmEntityType, EdmPath edmPath) => queryBuilderContext.AddFrom(edmEntityType,edmPath);
-        public EdmPath AddJoin(EdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath) => queryBuilderContext.AddJoin(rightNavigationProperty,rightPath,leftPath);
+        public EdmPath AddFrom(IEdmEntityType edmEntityType, EdmPath edmPath) => queryBuilderContext.AddFrom(edmEntityType, edmPath);
+        public EdmPath AddJoin(IEdmNavigationProperty rightNavigationProperty, EdmPath rightPath, EdmPath leftPath) => queryBuilderContext.AddJoin(rightNavigationProperty,rightPath,leftPath);
 
-        public void AddSelect(EdmPath edmPath, EdmStructuralProperty property, string? customName = null) => queryBuilderContext.AddSelect(edmPath,property,customName);
+        public void AddSelect(EdmPath edmPath, IEdmStructuralProperty property, string? customName = null) => queryBuilderContext.AddSelect(edmPath,property,customName);
 
-        public void AddSelectKey(EdmPath? path, EdmEntityType? type) => queryBuilderContext.AddSelectKey(path, type);
-        public void AddSelectAll(EdmPath? path, EdmEntityType? type) => queryBuilderContext.AddSelectAll(path, type);
+        public void AddSelectKey(EdmPath? path, IEdmEntityType? type) => queryBuilderContext.AddSelectKey(path, type);
+        public void AddSelectAll(EdmPath? path, IEdmEntityType? type) => queryBuilderContext.AddSelectAll(path, type);
 
-        public void AddCount(EdmPath edmPath, EdmStructuralProperty edmStructuralProperty) => queryBuilderContext.AddCount(edmPath, edmStructuralProperty);
+        public void AddCount(EdmPath edmPath, IEdmStructuralProperty edmStructuralProperty) => queryBuilderContext.AddCount(edmPath, edmStructuralProperty);
 
         public void AddFilter(BinaryFilter filter) => queryBuilderContext.AddFilter(filter);
 
-        public void AddOrderBy(EdmPath edmPath, EdmStructuralProperty property, OrderByDirection direction) => queryBuilderContext.AddOrderBy(edmPath,property, direction);
+        public void AddOrderBy(EdmPath edmPath, IEdmStructuralProperty property, OrderByDirection direction) => queryBuilderContext.AddOrderBy(edmPath,property, direction);
 
         public void WrapQuery(IOdataParserContext context, EdmPath resourcePath) => queryBuilderContext.WrapQuery(context, resourcePath);
 
